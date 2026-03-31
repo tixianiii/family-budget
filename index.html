@@ -19,9 +19,40 @@
   @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
   @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
   
-  .date-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; }
-  input[type=date] { text-align: center; display: block; margin: 0 auto; width: 100%; }
-  input[type=date]::-webkit-calendar-picker-indicator { margin-left: -15px; }
+  /* 🌟 修正 iOS 日期置中問題 */
+  .date-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  input[type="date"] {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    font-weight: 900;
+    border: 2px solid #F3F4F6;
+    border-radius: 12px;
+    background: #F9FAFB;
+    color: #1a1a1a;
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    font-family: inherit;
+    outline: none;
+  }
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: center;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* 隱藏原生數字框的上下箭頭 */
   input[type=number]::-webkit-inner-spin-button,
   input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 </style>
@@ -29,13 +60,11 @@
 <body>
 <div id="error-log" style="color: red; font-weight: bold; padding: 20px;"></div>
 
-<div id="root">
-  <div style="text-align: center; padding: 50px; color: #9CA3AF;">正在載入記帳本...</div>
-</div>
+<div id="root"></div>
 
 <script>
   window.addEventListener('error', function(e) {
-    document.getElementById('error-log').innerHTML += '出現錯誤: ' + e.message + '<br>';
+    document.getElementById('error-log').innerHTML += '系統發生錯誤，請截圖通知開發者: ' + e.message + '<br>';
   });
 </script>
 
@@ -43,7 +72,7 @@
 const { useState, useEffect, useCallback } = React;
 const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
 
-// API 網址
+// 綁定你的 Google Apps Script 網址
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyv5ROh9LiMjcDsfdp4u1pmpxKgCX0O9yJL02Bv2XC-SzDNwxbTKjK4XRh9SIOIyAtk/exec";
 
 const MEMBERS = [
@@ -144,12 +173,25 @@ function App() {
   const handleSubmit = async () => {
     if (!member) return showToast("請選擇成員", "error");
     if (!category) return showToast("請選擇類別", "error");
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return showToast("請輸入有效金額", "error");
+    if (!amount) return showToast("請輸入金額", "error");
+
+    // 🌟 自動計算算式邏輯 (支援輸入 100+50 等)
+    let calculatedAmount = 0;
+    try {
+      const sanitized = String(amount).replace(/[^-()\d/*+.]/g, ''); // 過濾掉非數學符號
+      calculatedAmount = Function(`"use strict"; return (${sanitized})`)();
+    } catch(e) {
+      return showToast("輸入的金額算式格式怪怪的哦", "error");
+    }
+
+    if (!calculatedAmount || isNaN(calculatedAmount) || calculatedAmount <= 0) {
+      return showToast("請輸入有效的正數金額", "error");
+    }
 
     const record = {
       id: Date.now(), date, member: member.label, category: category.id,
       categoryLabel: category.label, categoryEmoji: category.emoji,
-      categoryColor: category.color, subCategory, amount: Number(amount), note,
+      categoryColor: category.color, subCategory, amount: calculatedAmount, note,
     };
 
     const optimistic = { ...record, member };
@@ -262,10 +304,7 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
       <Card>
         <div className="date-wrapper">
           <SectionLabel>📅 日期</SectionLabel>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{
-            fontSize:18, fontWeight:700, border:"2px solid #F3F4F6", borderRadius:12, 
-            padding:"10px 14px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", outline:"none", cursor:"pointer"
-          }} />
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} />
           <div style={{ marginTop:8, fontSize:14, color:"#374151", fontWeight:700 }}>{formatDate(date)}</div>
         </div>
       </Card>
@@ -314,10 +353,12 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
       </Card>
 
       <Card>
-        <SectionLabel>💰 金額</SectionLabel>
+        <SectionLabel>💰 金額 (支援算式如 100+50)</SectionLabel>
         <div style={{ position:"relative" }}>
           <span style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", fontSize:24, color:"#9CA3AF", fontWeight:700 }}>$</span>
-          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" min="0" style={{ width:"100%", fontSize:36, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12, padding:"14px 14px 14px 44px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", outline:"none" }} />
+          {/* 🌟 換成了支援小數點的最直覺數字鍵盤 */}
+          <input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" 
+            style={{ width:"100%", fontSize:36, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12, padding:"14px 14px 14px 44px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", outline:"none" }} />
         </div>
         <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2} style={{ width:"100%", marginTop:12, fontSize:14, border:"2px solid #F3F4F6", borderRadius:12, padding:"10px 14px", color:"#374151", background:"#F9FAFB", fontFamily:"inherit", outline:"none", resize:"none", lineHeight:1.6 }} />
       </Card>
