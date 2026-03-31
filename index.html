@@ -73,7 +73,12 @@ const CATEGORIES = [
 
 const getCatById = (label) => CATEGORIES.find(c => c.label === label) || CATEGORIES[CATEGORIES.length - 1];
 
-const cleanDate = (str) => { if (!str) return ""; return String(str).split("T")[0]; };
+const cleanDate = (str) => {
+  if (!str) return "";
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return String(str).split("T")[0];
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
 
 const today = () => {
   const d = new Date();
