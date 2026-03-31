@@ -208,9 +208,13 @@ function App() {
       <div style={{ background:"#1a1a1a", padding:"20px 20px 0", position:"sticky", top:0, zIndex:100 }}>
         <div style={{ maxWidth:480, margin:"0 auto" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-            <div>
-              <div style={{ color:"#F59E0B", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase" }}>家庭共享</div>
-              <div style={{ color:"#fff", fontSize:22, fontWeight:900 }}>記帳本</div>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div>
+                <div style={{ color:"#F59E0B", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase" }}>家庭共享</div>
+                <div style={{ color:"#fff", fontSize:22, fontWeight:900 }}>記帳本</div>
+              </div>
+              {/* 🌟 新增的重整按鈕在這裡 */}
+              <button onClick={() => fetchRecords(selYear, selMonth)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", padding:5, opacity:0.8 }}>🔄</button>
             </div>
             {/* 顯示當前選擇月份的總支出 */}
             <div style={{ textAlign:"right" }}>
