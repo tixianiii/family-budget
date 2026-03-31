@@ -4,12 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>家庭記帳本</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
 <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Noto Sans TC', sans-serif; background: #F8F7F4; }
@@ -17,33 +19,31 @@
   @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
   @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
   
-  /* 強制日期選擇器置中 */
-  .date-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
-  input[type=date] { 
-    text-align: center; 
-    display: block;
-    margin: 0 auto;
-    width: 100%;
-  }
-  input[type=date]::-webkit-calendar-picker-indicator { 
-    margin-left: -15px; /* 微調圖示位置讓文字更置中 */
-  }
+  .date-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; }
+  input[type=date] { text-align: center; display: block; margin: 0 auto; width: 100%; }
+  input[type=date]::-webkit-calendar-picker-indicator { margin-left: -15px; }
   input[type=number]::-webkit-inner-spin-button,
   input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="error-log" style="color: red; font-weight: bold; padding: 20px;"></div>
+
+<div id="root">
+  <div style="text-align: center; padding: 50px; color: #9CA3AF;">正在載入記帳本...</div>
+</div>
+
+<script>
+  window.addEventListener('error', function(e) {
+    document.getElementById('error-log').innerHTML += '出現錯誤: ' + e.message + '<br>';
+  });
+</script>
+
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
 
-// 你的 API 網址
+// API 網址
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyv5ROh9LiMjcDsfdp4u1pmpxKgCX0O9yJL02Bv2XC-SzDNwxbTKjK4XRh9SIOIyAtk/exec";
 
 const MEMBERS = [
@@ -69,7 +69,6 @@ const CATEGORIES = [
 
 const getCatById = (label) => CATEGORIES.find(c => c.label === label) || CATEGORIES[CATEGORIES.length - 1];
 
-// 核心修正：確保所有的 T16... 雜訊都被切除
 const cleanDate = (str) => {
   if (!str) return "";
   return String(str).split("T")[0];
@@ -148,16 +147,11 @@ function App() {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return showToast("請輸入有效金額", "error");
 
     const record = {
-      id: Date.now(), date,
-      member: member.label,
-      category: category.id,
-      categoryLabel: category.label,
-      categoryEmoji: category.emoji,
-      categoryColor: category.color,
-      subCategory, amount: Number(amount), note,
+      id: Date.now(), date, member: member.label, category: category.id,
+      categoryLabel: category.label, categoryEmoji: category.emoji,
+      categoryColor: category.color, subCategory, amount: Number(amount), note,
     };
 
-    // 樂觀更新 UI
     const optimistic = { ...record, member };
     setRecords(prev => [optimistic, ...prev]);
     setMember(null); setCategory(null); setSubCategory(null); setAmount(""); setNote("");
@@ -187,7 +181,6 @@ function App() {
   };
 
   const handleDelete = async (id) => {
-    // 樂觀刪除 UI
     setRecords(prev => prev.filter(r => r.id !== id));
     showToast("⏳ 刪除中…");
     try {
@@ -209,18 +202,13 @@ function App() {
     }
   };
 
-  const totalSpend = records.reduce((s, r) => s + r.amount, 0);
-
   return (
     <div style={{ fontFamily:"'Noto Sans TC',sans-serif", minHeight:"100vh", background:"#F8F7F4" }}>
       {toast && (
         <div style={{
-          position:"fixed", top:20, left:"50%", transform:"translateX(-50%)",
-          background: toast.type === "error" ? "#EF4444" : "#1a1a1a",
-          color:"#fff", padding:"10px 24px", borderRadius:99, zIndex:9999,
-          fontSize:14, fontWeight:600, boxShadow:"0 4px 24px rgba(0,0,0,0.18)",
-          animation:"fadeIn 0.2s ease", whiteSpace:"nowrap", maxWidth:"90vw",
-          overflow:"hidden", textOverflow:"ellipsis"
+          position:"fixed", top:20, left:"50%", transform:"translateX(-50%)", background: toast.type === "error" ? "#EF4444" : "#1a1a1a",
+          color:"#fff", padding:"10px 24px", borderRadius:99, zIndex:9999, fontSize:14, fontWeight:600, boxShadow:"0 4px 24px rgba(0,0,0,0.18)",
+          animation:"fadeIn 0.2s ease", whiteSpace:"nowrap", maxWidth:"90vw", overflow:"hidden", textOverflow:"ellipsis"
         }}>{toast.msg}</div>
       )}
 
@@ -276,8 +264,7 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
           <SectionLabel>📅 日期</SectionLabel>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{
             fontSize:18, fontWeight:700, border:"2px solid #F3F4F6", borderRadius:12, 
-            padding:"10px 14px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", 
-            outline:"none", cursor:"pointer"
+            padding:"10px 14px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", outline:"none", cursor:"pointer"
           }} />
           <div style={{ marginTop:8, fontSize:14, color:"#374151", fontWeight:700 }}>{formatDate(date)}</div>
         </div>
@@ -288,9 +275,8 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
         <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8 }}>
           {MEMBERS.map(m => (
             <button key={m.id} onClick={() => setMember(m)} style={{
-              padding:"12px 4px", border:`2px solid ${member?.id===m.id ? m.color : "#F3F4F6"}`,
-              borderRadius:12, background: member?.id===m.id ? m.color+"18" : "#F9FAFB",
-              cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
+              padding:"12px 4px", border:`2px solid ${member?.id===m.id ? m.color : "#F3F4F6"}`, borderRadius:12,
+              background: member?.id===m.id ? m.color+"18" : "#F9FAFB", cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
             }}>
               <div style={{ fontSize:22 }}>{m.emoji}</div>
               <div style={{ fontSize:12, fontWeight:700, color: member?.id===m.id ? m.color : "#374151", marginTop:2 }}>{m.label}</div>
@@ -304,9 +290,8 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
         <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6 }}>
           {CATEGORIES.map(cat => (
             <button key={cat.id} onClick={() => onCategorySelect(cat)} style={{
-              padding:"10px 4px", border:`2px solid ${category?.id===cat.id ? cat.color : "#F3F4F6"}`,
-              borderRadius:12, background: category?.id===cat.id ? cat.color+"18" : "#F9FAFB",
-              cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
+              padding:"10px 4px", border:`2px solid ${category?.id===cat.id ? cat.color : "#F3F4F6"}`, borderRadius:12,
+              background: category?.id===cat.id ? cat.color+"18" : "#F9FAFB", cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
             }}>
               <div style={{ fontSize:20 }}>{cat.emoji}</div>
               <div style={{ fontSize:11, fontWeight:600, color: category?.id===cat.id ? cat.color : "#6B7280", marginTop:2 }}>{cat.label}</div>
@@ -319,10 +304,8 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
             <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
               {catObj.subs.map(sub => (
                 <button key={sub} onClick={() => setSubCategory(sub)} style={{
-                  padding:"6px 14px", border:`2px solid ${subCategory===sub ? catObj.color : "#E5E7EB"}`,
-                  borderRadius:99, background: subCategory===sub ? catObj.color : "#fff",
-                  color: subCategory===sub ? "#fff" : "#374151", fontSize:13, fontWeight:600,
-                  cursor:"pointer", transition:"all 0.15s", fontFamily:"inherit"
+                  padding:"6px 14px", border:`2px solid ${subCategory===sub ? catObj.color : "#E5E7EB"}`, borderRadius:99,
+                  background: subCategory===sub ? catObj.color : "#fff", color: subCategory===sub ? "#fff" : "#374151", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all 0.15s", fontFamily:"inherit"
                 }}>{sub}</button>
               ))}
             </div>
@@ -334,19 +317,12 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
         <SectionLabel>💰 金額</SectionLabel>
         <div style={{ position:"relative" }}>
           <span style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", fontSize:24, color:"#9CA3AF", fontWeight:700 }}>$</span>
-          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" min="0"
-            style={{ width:"100%", fontSize:36, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12,
-              padding:"14px 14px 14px 44px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", outline:"none" }} />
+          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" min="0" style={{ width:"100%", fontSize:36, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12, padding:"14px 14px 14px 44px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", outline:"none" }} />
         </div>
-        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2}
-          style={{ width:"100%", marginTop:12, fontSize:14, border:"2px solid #F3F4F6", borderRadius:12,
-            padding:"10px 14px", color:"#374151", background:"#F9FAFB", fontFamily:"inherit", outline:"none", resize:"none", lineHeight:1.6 }} />
+        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2} style={{ width:"100%", marginTop:12, fontSize:14, border:"2px solid #F3F4F6", borderRadius:12, padding:"10px 14px", color:"#374151", background:"#F9FAFB", fontFamily:"inherit", outline:"none", resize:"none", lineHeight:1.6 }} />
       </Card>
 
-      <button onClick={onSubmit}
-        style={{ width:"100%", padding:"18px 0", background:"#1a1a1a", color:"#F59E0B",
-          border:"none", borderRadius:16, fontSize:17, fontWeight:900, cursor:"pointer",
-          letterSpacing:2, fontFamily:"inherit", boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>
+      <button onClick={onSubmit} style={{ width:"100%", padding:"18px 0", background:"#1a1a1a", color:"#F59E0B", border:"none", borderRadius:16, fontSize:17, fontWeight:900, cursor:"pointer", letterSpacing:2, fontFamily:"inherit", boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>
         ＋ 新增支出
       </button>
 
@@ -363,19 +339,13 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                     <span style={{ fontWeight:700, fontSize:14, color:"#1a1a1a" }}>{r.categoryLabel}</span>
                     {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF" }}>/ {r.subCategory}</span>}
-                    <span style={{ fontSize:11, color:"#9CA3AF", marginLeft:"auto" }}>
-                      {r.member?.emoji} {r.member?.label}
-                    </span>
+                    <span style={{ fontSize:11, color:"#9CA3AF", marginLeft:"auto" }}>{r.member?.emoji} {r.member?.label}</span>
                   </div>
                   <div style={{ fontSize:12, color:"#9CA3AF", marginTop:2 }}>{formatDate(r.date)}{r.note && ` · ${r.note}`}</div>
                 </div>
                 <div style={{ fontWeight:900, fontSize:15, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
-                
-                {/* 刪除按鈕 */}
                 <button onClick={() => setConfirmId(confirmId === r.id ? null : r.id)} style={{ background:"none", border:"none", color:"#D1D5DB", cursor:"pointer", fontSize:18, padding:4, flexShrink:0 }}>🗑</button>
               </div>
-              
-              {/* 刪除確認區塊 */}
               {confirmId === r.id && (
                 <div style={{ marginTop:10, display:"flex", gap:8, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}>
                   <button onClick={() => setConfirmId(null)} style={{ padding:"6px 16px", borderRadius:99, border:"2px solid #E5E7EB", background:"#fff", color:"#6B7280", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>取消</button>
@@ -418,19 +388,12 @@ function DashboardView({ records }) {
     return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>{`${(percent*100).toFixed(0)}%`}</text>;
   };
 
-  const prevMonth = () => {
-    if (selMonth === 1) { setSelYear(y => y-1); setSelMonth(12); }
-    else setSelMonth(m => m-1);
-  };
-  const nextMonth = () => {
-    if (selMonth === 12) { setSelYear(y => y+1); setSelMonth(1); }
-    else setSelMonth(m => m+1);
-  };
+  const prevMonth = () => { if (selMonth === 1) { setSelYear(y => y-1); setSelMonth(12); } else setSelMonth(m => m-1); };
+  const nextMonth = () => { if (selMonth === 12) { setSelYear(y => y+1); setSelMonth(1); } else setSelMonth(m => m+1); };
   const isCurrentMonth = selYear === now.getFullYear() && selMonth === now.getMonth()+1;
 
   return (
     <>
-      {/* 月份選擇器 */}
       <Card>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <button onClick={prevMonth} style={{ width:36, height:36, borderRadius:99, border:"2px solid #F3F4F6", background:"#F9FAFB", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
@@ -483,9 +446,38 @@ function DashboardView({ records }) {
                   <div style={{ width:28, height:28, borderRadius:8, background:cat.color+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>{cat.emoji}</div>
                   <span style={{ flex:1, fontWeight:700, fontSize:14, color:"#1a1a1a" }}>{cat.label}</span>
                   <span style={{ fontWeight:900, fontSize:15, color:cat.color }}>{formatMoney(cat.total)}</span>
-                  <span style={{ fontSize:12, color:"#9CA3AF", width:36, textAlign:"right" }}>
-                    {totalSpend > 0 ? ((cat.total/totalSpend)*100).toFixed(1) : 0}%
-                  </span>
+                  <span style={{ fontSize:12, color:"#9CA3AF", width:36, textAlign:"right" }}>{totalSpend > 0 ? ((cat.total/totalSpend)*100).toFixed(1) : 0}%</span>
                 </div>
                 <div style={{ height:6, background:"#F3F4F6", borderRadius:99, overflow:"hidden" }}>
-                  <div style={{ height:"100%", background:cat.color, borderRadius:99, width:`${totalSpend > 0 ? (
+                  <div style={{ height:"100%", background:cat.color, borderRadius:99, width:`${totalSpend > 0 ? (cat.total/totalSpend)*100 : 0}%`, transition:"width 0.5s ease" }} />
+                </div>
+              </div>
+            ))}
+          </Card>
+
+          <Card>
+            <SectionLabel>👥 成員支出</SectionLabel>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:10 }}>
+              {MEMBERS.map(m => {
+                const total = filtered.filter(r => r.member?.id === m.id).reduce((s,r) => s+r.amount, 0);
+                return (
+                  <div key={m.id} style={{ background: total > 0 ? m.color+"12" : "#F9FAFB", border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`, borderRadius:14, padding:"14px 12px", textAlign:"center" }}>
+                    <div style={{ fontSize:28 }}>{m.emoji}</div>
+                    <div style={{ fontWeight:700, fontSize:13, color:"#374151", marginTop:4 }}>{m.label}</div>
+                    <div style={{ fontWeight:900, fontSize:17, color: total > 0 ? m.color : "#D1D5DB", marginTop:4 }}>{formatMoney(total)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </>
+      )}
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
