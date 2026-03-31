@@ -1,22 +1,21 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>家庭記帳本</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>家庭記帳本</title>
 
-    <link rel="apple-touch-icon" href="icon.png">
-    <meta name="apple-mobile-web-app-title" content="家庭記帳">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-title" content="家庭記帳">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js" crossorigin></script>
-    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js" crossorigin></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
-</head>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js" crossorigin></script>
+<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,60 +24,30 @@
   @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
   @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
   
-  /* 🌟 修正 iOS 日期置中問題 */
-  .date-wrapper {
-    position: relative;
-    width: 100%;
-  }
+  .date-wrapper { position: relative; width: 100%; }
   input[type="date"] {
-    width: 100%;
-    padding: 12px;
-    font-size: 18px;
-    font-weight: 900;
-    border: 2px solid #F3F4F6;
-    border-radius: 12px;
-    background: #F9FAFB;
-    color: #1a1a1a;
-    text-align: center;
-    appearance: none;
-    -webkit-appearance: none;
-    font-family: inherit;
-    outline: none;
+    width: 100%; padding: 12px; font-size: 18px; font-weight: 900;
+    border: 2px solid #F3F4F6; border-radius: 12px; background: #F9FAFB;
+    color: #1a1a1a; text-align: center; appearance: none; -webkit-appearance: none;
+    font-family: inherit; outline: none;
   }
-  input[type="date"]::-webkit-date-and-time-value {
-    text-align: center;
-  }
+  input[type="date"]::-webkit-date-and-time-value { text-align: center; }
   input[type="date"]::-webkit-calendar-picker-indicator {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
   }
-
-  /* 隱藏原生數字框的上下箭頭 */
   input[type=number]::-webkit-inner-spin-button,
   input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 </style>
 </head>
 <body>
-<div id="error-log" style="color: red; font-weight: bold; padding: 20px;"></div>
 
 <div id="root"></div>
-
-<script>
-  window.addEventListener('error', function(e) {
-    document.getElementById('error-log').innerHTML += '系統發生錯誤，請截圖通知開發者: ' + e.message + '<br>';
-  });
-</script>
 
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
 
-// 綁定你的 Google Apps Script 網址
+// 🔗 你的 Google API
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyv5ROh9LiMjcDsfdp4u1pmpxKgCX0O9yJL02Bv2XC-SzDNwxbTKjK4XRh9SIOIyAtk/exec";
 
 const MEMBERS = [
@@ -104,10 +73,7 @@ const CATEGORIES = [
 
 const getCatById = (label) => CATEGORIES.find(c => c.label === label) || CATEGORIES[CATEGORIES.length - 1];
 
-const cleanDate = (str) => {
-  if (!str) return "";
-  return String(str).split("T")[0];
-};
+const cleanDate = (str) => { if (!str) return ""; return String(str).split("T")[0]; };
 
 const today = () => {
   const d = new Date();
@@ -134,6 +100,11 @@ function App() {
   const [tab, setTab] = useState(0);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // 🌟 將觀看月份的狀態提升到最高層，這樣報表跟記帳頁面可以同步
+  const [selYear, setSelYear] = useState(new Date().getFullYear());
+  const [selMonth, setSelMonth] = useState(new Date().getMonth() + 1);
+
   const [date, setDate] = useState(today());
   const [member, setMember] = useState(null);
   const [category, setCategory] = useState(null);
@@ -144,110 +115,84 @@ function App() {
 
   const showToast = useCallback((msg, type = "success") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const fetchRecords = useCallback(async () => {
+  // 🌟 改良版：只抓取指定月份的資料
+  const fetchRecords = useCallback(async (year, month) => {
+    setLoading(true);
     try {
-      const res = await fetch(APPS_SCRIPT_URL);
-      if (!res.ok) { showToast(`❌ HTTP ${res.status}`, "error"); return; }
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); }
-      catch(e) { showToast(`❌ 回應格式錯誤`, "error"); return; }
+      const targetMonth = `${year}_${String(month).padStart(2, '0')}`;
+      const res = await fetch(`${APPS_SCRIPT_URL}?month=${targetMonth}`);
+      const data = await res.json();
+      
       if (data.status === "ok") {
         const enriched = data.records.map(r => {
           const cat = getCatById(r.categoryLabel);
           const mem = MEMBERS.find(m => m.label === r.member) || MEMBERS[0];
           return { ...r, date: cleanDate(r.date), category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, member: mem };
         });
-        setRecords(enriched.reverse());
-      } else {
-        showToast(`❌ Sheets錯誤: ${data.message}`, "error");
+        // 將日期最新的排在前面
+        enriched.sort((a,b) => new Date(b.date) - new Date(a.date));
+        setRecords(enriched);
       }
     } catch (err) {
-      showToast(`❌ 連線失敗: ${err.message}`, "error");
+      showToast(`連線失敗`, "error");
     } finally {
       setLoading(false);
     }
   }, [showToast]);
 
-  useEffect(() => { fetchRecords(); }, [fetchRecords]);
+  // 當選擇的年份或月份改變時，重新抓取資料
+  useEffect(() => {
+    fetchRecords(selYear, selMonth);
+  }, [selYear, selMonth, fetchRecords]);
 
   const handleCategorySelect = (cat) => { setCategory(cat); setSubCategory(null); };
 
   const handleSubmit = async () => {
-    if (!member) return showToast("請選擇成員", "error");
-    if (!category) return showToast("請選擇類別", "error");
-    if (!amount) return showToast("請輸入金額", "error");
+    if (!member || !category || !amount) return showToast("資料不完整哦", "error");
 
-    // 🌟 自動計算算式邏輯 (支援輸入 100+50 等)
     let calculatedAmount = 0;
     try {
-      const sanitized = String(amount).replace(/[^-()\d/*+.]/g, ''); // 過濾掉非數學符號
+      const sanitized = String(amount).replace(/[^-()\d/*+.]/g, '');
       calculatedAmount = Function(`"use strict"; return (${sanitized})`)();
-    } catch(e) {
-      return showToast("輸入的金額算式格式怪怪的哦", "error");
-    }
+    } catch(e) { return showToast("算式格式錯誤", "error"); }
 
-    if (!calculatedAmount || isNaN(calculatedAmount) || calculatedAmount <= 0) {
-      return showToast("請輸入有效的正數金額", "error");
-    }
+    if (!calculatedAmount || isNaN(calculatedAmount) || calculatedAmount <= 0) return showToast("請輸入有效金額", "error");
 
-    const record = {
-      id: Date.now(), date, member: member.label, category: category.id,
-      categoryLabel: category.label, categoryEmoji: category.emoji,
-      categoryColor: category.color, subCategory, amount: calculatedAmount, note,
-    };
-
-    const optimistic = { ...record, member };
-    setRecords(prev => [optimistic, ...prev]);
-    setMember(null); setCategory(null); setSubCategory(null); setAmount(""); setNote("");
     showToast("⏳ 儲存中…");
-
     try {
       const params = new URLSearchParams({
-        action: "write", id: String(record.id), date: record.date, member: record.member,
-        categoryLabel: record.categoryLabel, subCategory: record.subCategory || "",
-        amount: String(record.amount), note: record.note || "",
+        action: "write", id: String(Date.now()), date: date, member: member.label,
+        categoryLabel: category.label, subCategory: subCategory || "",
+        amount: String(calculatedAmount), note: note || "",
       });
       const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
-      if (!res.ok) { showToast(`❌ HTTP ${res.status}`, "error"); return; }
-      const text = await res.text();
-      let result;
-      try { result = JSON.parse(text); } catch(e) { showToast(`❌ 回應格式錯誤`, "error"); return; }
+      const result = await res.json();
       
       if (result.status === "ok") {
         showToast("✅ 記帳成功！");
-        fetchRecords();
-      } else {
-        showToast(`❌ 失敗: ${result.message}`, "error");
-      }
-    } catch (err) {
-      showToast(`❌ ${err.message}`, "error");
-    }
+        setMember(null); setCategory(null); setSubCategory(null); setAmount(""); setNote("");
+        // 儲存成功後，重新抓取當前畫面的月份資料
+        fetchRecords(selYear, selMonth);
+      } else { showToast(`❌ 失敗`, "error"); }
+    } catch (err) { showToast(`❌ 連線錯誤`, "error"); }
   };
 
-  const handleDelete = async (id) => {
-    setRecords(prev => prev.filter(r => r.id !== id));
+  // 🌟 刪除時，把該筆紀錄的日期也傳給後端，幫助後端快速找到分頁
+  const handleDelete = async (id, recordDate) => {
     showToast("⏳ 刪除中…");
     try {
-      const params = new URLSearchParams({ action: "delete", id: String(id) });
+      const params = new URLSearchParams({ action: "delete", id: String(id), date: recordDate });
       const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
-      const text = await res.text();
-      let result;
-      try { result = JSON.parse(text); } catch(e) { result = { status: "error" }; }
+      const result = await res.json();
+      
       if (result.status === "ok") {
-        showToast("🗑 已從雲端刪除");
-        fetchRecords();
-      } else {
-        showToast(`❌ 刪除失敗`, "error");
-        fetchRecords();
-      }
-    } catch(err) {
-      showToast(`❌ 刪除失敗: ${err.message}`, "error");
-      fetchRecords();
-    }
+        showToast("🗑 已刪除");
+        fetchRecords(selYear, selMonth);
+      } else { showToast(`❌ 刪除失敗`, "error"); }
+    } catch(err) { showToast(`❌ 連線錯誤`, "error"); }
   };
 
   return (
@@ -256,7 +201,7 @@ function App() {
         <div style={{
           position:"fixed", top:20, left:"50%", transform:"translateX(-50%)", background: toast.type === "error" ? "#EF4444" : "#1a1a1a",
           color:"#fff", padding:"10px 24px", borderRadius:99, zIndex:9999, fontSize:14, fontWeight:600, boxShadow:"0 4px 24px rgba(0,0,0,0.18)",
-          animation:"fadeIn 0.2s ease", whiteSpace:"nowrap", maxWidth:"90vw", overflow:"hidden", textOverflow:"ellipsis"
+          animation:"fadeIn 0.2s ease", whiteSpace:"nowrap", maxWidth:"90vw"
         }}>{toast.msg}</div>
       )}
 
@@ -265,7 +210,12 @@ function App() {
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
             <div>
               <div style={{ color:"#F59E0B", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase" }}>家庭共享</div>
-              <div style={{ color:"#fff", fontSize:22, fontWeight:900, lineHeight:1.2 }}>記帳本</div>
+              <div style={{ color:"#fff", fontSize:22, fontWeight:900 }}>記帳本</div>
+            </div>
+            {/* 顯示當前選擇月份的總支出 */}
+            <div style={{ textAlign:"right" }}>
+              <div style={{ color:"#9CA3AF", fontSize:11 }}>{selMonth}月總計</div>
+              <div style={{ color:"#F59E0B", fontSize:20, fontWeight:900 }}>{formatMoney(records.reduce((s, r) => s + r.amount, 0))}</div>
             </div>
           </div>
           <div style={{ display:"flex", gap:4 }}>
@@ -273,8 +223,7 @@ function App() {
               <button key={t} onClick={() => setTab(i)} style={{
                 flex:1, padding:"10px 0", border:"none", background:"transparent",
                 color: tab===i ? "#F59E0B" : "#6B7280", fontWeight:700, fontSize:15,
-                cursor:"pointer", borderBottom:`3px solid ${tab===i ? "#F59E0B" : "transparent"}`,
-                transition:"all 0.2s", fontFamily:"inherit"
+                cursor:"pointer", borderBottom:`3px solid ${tab===i ? "#F59E0B" : "transparent"}`, transition:"all 0.2s"
               }}>{t}</button>
             ))}
           </div>
@@ -284,24 +233,27 @@ function App() {
       <div style={{ maxWidth:480, margin:"0 auto", padding:"20px 16px 80px" }}>
         {tab === 0 ? (
           <>
-            {loading && <div style={{ textAlign:"center", padding:"16px 0", color:"#9CA3AF", fontSize:14 }}>⏳ 載入資料中…</div>}
             <FormView
               date={date} setDate={setDate} member={member} setMember={setMember}
               category={category} onCategorySelect={handleCategorySelect}
               subCategory={subCategory} setSubCategory={setSubCategory}
               amount={amount} setAmount={setAmount} note={note} setNote={setNote}
-              onSubmit={handleSubmit} recentRecords={records.slice(0, 10)} onDelete={handleDelete}
+              onSubmit={handleSubmit} recentRecords={records.slice(0, 10)} onDelete={handleDelete} loading={loading}
             />
           </>
         ) : (
-          <DashboardView records={records} />
+          <DashboardView 
+            records={records} loading={loading}
+            selYear={selYear} setSelYear={setSelYear} 
+            selMonth={selMonth} setSelMonth={setSelMonth} 
+          />
         )}
       </div>
     </div>
   );
 }
 
-function FormView({ date, setDate, member, setMember, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, recentRecords, onDelete }) {
+function FormView({ date, setDate, member, setMember, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, recentRecords, onDelete, loading }) {
   const catObj = CATEGORIES.find(c => c.id === category?.id);
   const [confirmId, setConfirmId] = useState(null);
 
@@ -321,7 +273,7 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
           {MEMBERS.map(m => (
             <button key={m.id} onClick={() => setMember(m)} style={{
               padding:"12px 4px", border:`2px solid ${member?.id===m.id ? m.color : "#F3F4F6"}`, borderRadius:12,
-              background: member?.id===m.id ? m.color+"18" : "#F9FAFB", cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
+              background: member?.id===m.id ? m.color+"18" : "#F9FAFB", cursor:"pointer", textAlign:"center", transition:"all 0.15s"
             }}>
               <div style={{ fontSize:22 }}>{m.emoji}</div>
               <div style={{ fontSize:12, fontWeight:700, color: member?.id===m.id ? m.color : "#374151", marginTop:2 }}>{m.label}</div>
@@ -336,7 +288,7 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
           {CATEGORIES.map(cat => (
             <button key={cat.id} onClick={() => onCategorySelect(cat)} style={{
               padding:"10px 4px", border:`2px solid ${category?.id===cat.id ? cat.color : "#F3F4F6"}`, borderRadius:12,
-              background: category?.id===cat.id ? cat.color+"18" : "#F9FAFB", cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
+              background: category?.id===cat.id ? cat.color+"18" : "#F9FAFB", cursor:"pointer", textAlign:"center", transition:"all 0.15s"
             }}>
               <div style={{ fontSize:20 }}>{cat.emoji}</div>
               <div style={{ fontSize:11, fontWeight:600, color: category?.id===cat.id ? cat.color : "#6B7280", marginTop:2 }}>{cat.label}</div>
@@ -350,7 +302,7 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
               {catObj.subs.map(sub => (
                 <button key={sub} onClick={() => setSubCategory(sub)} style={{
                   padding:"6px 14px", border:`2px solid ${subCategory===sub ? catObj.color : "#E5E7EB"}`, borderRadius:99,
-                  background: subCategory===sub ? catObj.color : "#fff", color: subCategory===sub ? "#fff" : "#374151", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all 0.15s", fontFamily:"inherit"
+                  background: subCategory===sub ? catObj.color : "#fff", color: subCategory===sub ? "#fff" : "#374151", fontSize:13, fontWeight:600, transition:"all 0.15s"
                 }}>{sub}</button>
               ))}
             </div>
@@ -359,23 +311,23 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
       </Card>
 
       <Card>
-        <SectionLabel>💰 金額</SectionLabel>
+        <SectionLabel>💰 金額 (支援算式如 100+50)</SectionLabel>
         <div style={{ position:"relative" }}>
           <span style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", fontSize:24, color:"#9CA3AF", fontWeight:700 }}>$</span>
-          {/* 🌟 換成了支援小數點的最直覺數字鍵盤 */}
           <input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" 
-            style={{ width:"100%", fontSize:36, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12, padding:"14px 14px 14px 44px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", outline:"none" }} />
+            style={{ width:"100%", fontSize:36, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12, padding:"14px 14px 14px 44px", color:"#1a1a1a", background:"#F9FAFB", outline:"none" }} />
         </div>
-        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2} style={{ width:"100%", marginTop:12, fontSize:14, border:"2px solid #F3F4F6", borderRadius:12, padding:"10px 14px", color:"#374151", background:"#F9FAFB", fontFamily:"inherit", outline:"none", resize:"none", lineHeight:1.6 }} />
+        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2} style={{ width:"100%", marginTop:12, fontSize:14, border:"2px solid #F3F4F6", borderRadius:12, padding:"10px 14px", color:"#374151", background:"#F9FAFB", outline:"none", resize:"none", lineHeight:1.6 }} />
       </Card>
 
-      <button onClick={onSubmit} style={{ width:"100%", padding:"18px 0", background:"#1a1a1a", color:"#F59E0B", border:"none", borderRadius:16, fontSize:17, fontWeight:900, cursor:"pointer", letterSpacing:2, fontFamily:"inherit", boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>
+      <button onClick={onSubmit} style={{ width:"100%", padding:"18px 0", background:"#1a1a1a", color:"#F59E0B", border:"none", borderRadius:16, fontSize:17, fontWeight:900, cursor:"pointer", letterSpacing:2, boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>
         ＋ 新增支出
       </button>
 
-      {recentRecords.length > 0 && (
+      {loading ? <div style={{ textAlign:"center", padding:"20px", color:"#9CA3AF", fontWeight:700 }}>⏳ 同步資料中...</div> : 
+      recentRecords.length > 0 && (
         <div style={{ marginTop:24 }}>
-          <SectionLabel>🕐 最近記錄 (點擊垃圾桶刪除)</SectionLabel>
+          <SectionLabel>🕐 當月最近記錄 (點擊垃圾桶刪除)</SectionLabel>
           {recentRecords.map(r => (
             <div key={r.id} style={{ background:"#fff", borderRadius:14, padding:"12px 14px", marginBottom:8, boxShadow:"0 1px 6px rgba(0,0,0,0.05)" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -391,12 +343,13 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
                   <div style={{ fontSize:12, color:"#9CA3AF", marginTop:2 }}>{formatDate(r.date)}{r.note && ` · ${r.note}`}</div>
                 </div>
                 <div style={{ fontWeight:900, fontSize:15, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
+                {/* 傳遞 id 與 date 給後端 */}
                 <button onClick={() => setConfirmId(confirmId === r.id ? null : r.id)} style={{ background:"none", border:"none", color:"#D1D5DB", cursor:"pointer", fontSize:18, padding:4, flexShrink:0 }}>🗑</button>
               </div>
               {confirmId === r.id && (
                 <div style={{ marginTop:10, display:"flex", gap:8, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}>
-                  <button onClick={() => setConfirmId(null)} style={{ padding:"6px 16px", borderRadius:99, border:"2px solid #E5E7EB", background:"#fff", color:"#6B7280", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>取消</button>
-                  <button onClick={() => { onDelete(r.id); setConfirmId(null); }} style={{ padding:"6px 16px", borderRadius:99, border:"none", background:"#EF4444", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>確認刪除</button>
+                  <button onClick={() => setConfirmId(null)} style={{ padding:"6px 16px", borderRadius:99, border:"2px solid #E5E7EB", background:"#fff", color:"#6B7280", fontSize:13, fontWeight:600, cursor:"pointer" }}>取消</button>
+                  <button onClick={() => { onDelete(r.id, r.date); setConfirmId(null); }} style={{ padding:"6px 16px", borderRadius:99, border:"none", background:"#EF4444", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>確認刪除</button>
                 </div>
               )}
             </div>
@@ -407,24 +360,14 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
   );
 }
 
-function DashboardView({ records }) {
-  const now = new Date();
-  const [selYear, setSelYear] = useState(now.getFullYear());
-  const [selMonth, setSelMonth] = useState(now.getMonth() + 1);
-
-  const filtered = records.filter(r => {
-    const d = cleanDate(r.date);
-    if (!d) return false;
-    const [y, m] = d.split("-");
-    return Number(y) === selYear && Number(m) === selMonth;
-  });
-
+function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSelMonth }) {
+  // 已經不需要在前端過濾了！因為後端傳來的 records 就已經是精準的當月資料
   const categoryTotals = CATEGORIES.map(cat => {
-    const total = filtered.filter(r => r.category === cat.id).reduce((s, r) => s + r.amount, 0);
+    const total = records.filter(r => r.category === cat.id).reduce((s, r) => s + r.amount, 0);
     return { ...cat, total };
   }).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
 
-  const totalSpend = filtered.reduce((s, r) => s + r.amount, 0);
+  const totalSpend = records.reduce((s, r) => s + r.amount, 0);
 
   const RADIAN = Math.PI / 180;
   const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
@@ -437,41 +380,44 @@ function DashboardView({ records }) {
 
   const prevMonth = () => { if (selMonth === 1) { setSelYear(y => y-1); setSelMonth(12); } else setSelMonth(m => m-1); };
   const nextMonth = () => { if (selMonth === 12) { setSelYear(y => y+1); setSelMonth(1); } else setSelMonth(m => m+1); };
-  const isCurrentMonth = selYear === now.getFullYear() && selMonth === now.getMonth()+1;
 
   return (
     <>
       <Card>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <button onClick={prevMonth} style={{ width:36, height:36, borderRadius:99, border:"2px solid #F3F4F6", background:"#F9FAFB", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+          <button onClick={prevMonth} style={{ width:36, height:36, borderRadius:99, border:"2px solid #F3F4F6", background:"#F9FAFB", fontSize:18, cursor:"pointer" }}>‹</button>
           <div style={{ textAlign:"center" }}>
             <div style={{ fontSize:20, fontWeight:900, color:"#1a1a1a" }}>{selYear}年{String(selMonth).padStart(2,"0")}月</div>
-            {isCurrentMonth && <div style={{ fontSize:11, color:"#F59E0B", fontWeight:700, marginTop:2 }}>本月</div>}
           </div>
-          <button onClick={nextMonth} style={{ width:36, height:36, borderRadius:99, border:"2px solid #F3F4F6", background:"#F9FAFB", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+          <button onClick={nextMonth} style={{ width:36, height:36, borderRadius:99, border:"2px solid #F3F4F6", background:"#F9FAFB", fontSize:18, cursor:"pointer" }}>›</button>
         </div>
       </Card>
 
-      <Card style={{ background:"#1a1a1a" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <div>
-            <div style={{ color:"#9CA3AF", fontSize:12, fontWeight:600 }}>當月支出</div>
-            <div style={{ color:"#F59E0B", fontSize:32, fontWeight:900, letterSpacing:-1 }}>{formatMoney(totalSpend)}</div>
-          </div>
-          <div style={{ textAlign:"right" }}>
-            <div style={{ color:"#9CA3AF", fontSize:12, fontWeight:600 }}>筆數</div>
-            <div style={{ color:"#fff", fontSize:32, fontWeight:900 }}>{filtered.length}</div>
-          </div>
+      {loading ? (
+        <div style={{ textAlign:"center", padding:"40px 20px", color:"#9CA3AF" }}>
+          <div style={{ fontSize:30, marginBottom:12 }}>⏳</div>
+          <div style={{ fontSize:16, fontWeight:700 }}>載入資料中...</div>
         </div>
-      </Card>
-
-      {filtered.length === 0 ? (
+      ) : records.length === 0 ? (
         <div style={{ textAlign:"center", padding:"40px 20px", color:"#9CA3AF" }}>
           <div style={{ fontSize:48, marginBottom:12 }}>📭</div>
           <div style={{ fontSize:16, fontWeight:700, color:"#374151" }}>這個月沒有記錄</div>
         </div>
       ) : (
         <>
+          <Card style={{ background:"#1a1a1a" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <div style={{ color:"#9CA3AF", fontSize:12, fontWeight:600 }}>當月支出</div>
+                <div style={{ color:"#F59E0B", fontSize:32, fontWeight:900, letterSpacing:-1 }}>{formatMoney(totalSpend)}</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ color:"#9CA3AF", fontSize:12, fontWeight:600 }}>筆數</div>
+                <div style={{ color:"#fff", fontSize:32, fontWeight:900 }}>{records.length}</div>
+              </div>
+            </div>
+          </Card>
+
           <Card>
             <SectionLabel>📊 支出類別比例</SectionLabel>
             <ResponsiveContainer width="100%" height={260}>
@@ -506,7 +452,7 @@ function DashboardView({ records }) {
             <SectionLabel>👥 成員支出</SectionLabel>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:10 }}>
               {MEMBERS.map(m => {
-                const total = filtered.filter(r => r.member?.id === m.id).reduce((s,r) => s+r.amount, 0);
+                const total = records.filter(r => r.member?.id === m.id).reduce((s,r) => s+r.amount, 0);
                 return (
                   <div key={m.id} style={{ background: total > 0 ? m.color+"12" : "#F9FAFB", border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`, borderRadius:14, padding:"14px 12px", textAlign:"center" }}>
                     <div style={{ fontSize:28 }}>{m.emoji}</div>
