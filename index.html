@@ -1,998 +1,347 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>家庭記帳本</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
-<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Noto Sans TC', sans-serif; background: #F8F7F4; }
-  ::-webkit-scrollbar { display: none; }
-  @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
-  @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-  input[type=date] { text-align: center; }
-  input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
-  input[type=number]::-webkit-inner-spin-button,
-  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>家庭記帳本</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Noto Sans TC', sans-serif; background: #F8F7F4; color: #1a1a1a; }
+        ::-webkit-scrollbar { display: none; }
+        
+        /* 修正日期選擇器置中與美化 */
+        .date-input-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        input[type=date] { 
+            width: 100%;
+            text-align: center; 
+            padding: 12px;
+            border: 2px solid #F3F4F6;
+            border-radius: 12/px;
+            font-size: 18px;
+            font-weight: 900;
+            background: #F9FAFB;
+            font-family: inherit;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+        @keyframes fadeIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+    </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const { useState, useEffect, useCallback } = React;
-const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+        const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
+
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyv5ROh9LiMjcDsfdp4u1pmpxKgCX0O9yJL02Bv2XC-SzDNwxbTKjK4XRh9SIOIyAtk/exec";
+
+        const MEMBERS = [
+            { id: "dad", label: "騏騏", emoji: "👨", color: "#3B82F6" },
+            { id: "mom", label: "潔潔", emoji: "👩", color: "#EC4899" },
+            { id: "sister", label: "嫻嫻", emoji: "👧", color: "#8B5CF6" },
+            { id: "brother", label: "澤澤", emoji: "🧒", color: "#10B981" },
+            { id: "whole_family", label: "全家", emoji: "👨‍👩‍👧‍👦", color: "#F59E0B" },
+        ];
+
+        const CATEGORIES = [
+            { id: "food", label: "飲食", emoji: "🍱", color: "#F59E0B", subs: ["早餐","午餐","晚餐","飲料","點心","宵夜","其他"] },
+            { id: "transport", label: "交通", emoji: "🚗", color: "#3B82F6", subs: ["公車","捷運","計程車","停車費","加油","高鐵","火車","摩托車"] },
+            { id: "entertainment", label: "娛樂", emoji: "🎮", color: "#8B5CF6", subs: ["電影","遊戲","KTV","展覽","運動","旅行","住宿"] },
+            { id: "company", label: "公司", emoji: "💼", color: "#6B7280", subs: [] },
+            { id: "shopping", label: "購物", emoji: "🛍️", color: "#EC4899", subs: ["衣服","鞋子","包包","3C","書籍","生活用品","網購"] },
+            { id: "personal", label: "個人", emoji: "💆", color: "#06B6D4", subs: ["通話費","投資","稅金","保險"] },
+            { id: "medical", label: "醫療", emoji: "🏥", color: "#EF4444", subs: ["掛號費","藥費","健康檢查"] },
+            { id: "family", label: "家居", emoji: "🏠", color: "#F97316", subs: ["房租","日常用品","水費","電費","家具"] },
+            { id: "education", label: "學習", emoji: "📚", color: "#10B981", subs: ["學費","補習班","書本"] },
+            { id: "other", label: "其他", emoji: "📌", color: "#9CA3AF", subs: [] },
+        ];
+
+        // 核心修正：移除 T16:00:00... 雜訊
+        const cleanDate = (str) => {
+            if (!str) return "";
+            return String(str).split('T')[0];
+        };
+
+        const formatDate = (str) => {
+            const dateStr = cleanDate(str);
+            const parts = dateStr.split("-");
+            if (parts.length !== 3) return dateStr;
+            return `${parts[0]}年${parts[1]}月${parts[2]}日`;
+        };
+
+        const formatMoney = (n) => `$${Number(n).toLocaleString()}`;
+
+        function Card({ children, style }) {
+            return <div style={{ background:"#fff", borderRadius:20, padding:20, marginBottom:16, boxShadow:"0 4px 12px rgba(0,0,0,0.05)", ...style }}>{children}</div>;
+        }
+
+        function App() {
+            const [tab, setTab] = useState(0);
+            const [records, setRecords] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+            const [member, setMember] = useState(null);
+            const [category, setCategory] = useState(null);
+            const [subCategory, setSubCategory] = useState(null);
+            const [amount, setAmount] = useState("");
+            const [note, setNote] = useState("");
+            const [toast, setToast] = useState(null);
+
+            const showToast = useCallback((msg, type = "success") => {
+                setToast({ msg, type });
+                setTimeout(() => setToast(null), 3000);
+            }, []);
+
+            const fetchRecords = useCallback(async () => {
+                setLoading(true);
+                try {
+                    const res = await fetch(APPS_SCRIPT_URL);
+                    const data = await res.json();
+                    if (data.status === "ok") {
+                        const enriched = data.records.map(r => ({
+                            ...r,
+                            date: cleanDate(r.date),
+                            memberObj: MEMBERS.find(m => m.label === r.member) || MEMBERS[0],
+                            catObj: CATEGORIES.find(c => c.label === r.categoryLabel) || CATEGORIES[CATEGORIES.length-1]
+                        }));
+                        setRecords(enriched.reverse());
+                    }
+                } catch (err) {
+                    showToast("讀取失敗", "error");
+                } finally {
+                    setLoading(false);
+                }
+            }, [showToast]);
+
+            useEffect(() => { fetchRecords(); }, [fetchRecords]);
+
+            const handleSubmit = async () => {
+                if (!member || !category || !amount) return showToast("請完整填寫金額與成員哦！", "error");
+
+                const newRecord = {
+                    action: "write",
+                    id: Date.now().toString(),
+                    date,
+                    member: member.label,
+                    categoryLabel: category.label,
+                    subCategory: subCategory || "",
+                    amount: amount,
+                    note: note
+                };
+
+                showToast("⏳ 正在儲存...");
+                try {
+                    const params = new URLSearchParams(newRecord);
+                    const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
+                    const result = await res.json();
+                    if (result.status === "ok") {
+                        showToast("✅ 記帳成功！");
+                        setAmount(""); setNote(""); setSubCategory(null);
+                        fetchRecords();
+                    }
+                } catch (e) { showToast("❌ 儲存失敗", "error"); }
+            };
+
+            const handleDelete = async (id) => {
+                if (!confirm("確定要刪除這筆紀錄嗎？")) return;
+                showToast("⏳ 正在刪除...");
+                try {
+                    const res = await fetch(`${APPS_SCRIPT_URL}?action=delete&id=${id}`);
+                    const result = await res.json();
+                    if (result.status === "ok") {
+                        showToast("🗑 已從雲端刪除");
+                        fetchRecords();
+                    }
+                } catch (e) { showToast("❌ 刪除失敗", "error"); }
+            };
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyv5ROh9LiMjcDsfdp4u1pmpxKgCX0O9yJL02Bv2XC-SzDNwxbTKjK4XRh9SIOIyAtk/exec";
-
-const MEMBERS = [
-  { id: "dad", label: "騏騏", emoji: "👨", color: "#3B82F6" },
-  { id: "mom", label: "潔潔", emoji: "👩", color: "#EC4899" },
-  { id: "sister", label: "嫻嫻", emoji: "👧", color: "#8B5CF6" },
-  { id: "brother", label: "澤澤", emoji: "🧒", color: "#10B981" },
-  { id: "whole_family", label: "全家", emoji: "👨‍👩‍👧‍👦", color: "#F59E0B" },
-];
-
-const CATEGORIES = [
-  { id: "food", label: "飲食", emoji: "🍱", color: "#F59E0B", subs: ["早餐","午餐","晚餐","飲料","點心","宵夜","酒","水果","保健品","其他"] },
-  { id: "transport", label: "交通", emoji: "🚗", color: "#3B82F6", subs: ["公車","捷運","計程車","停車費","加油","高鐵","汽車","火車","摩托車"] },
-  { id: "entertainment", label: "娛樂", emoji: "🎮", color: "#8B5CF6", subs: ["電影","遊戲","KTV","展覽","運動","訂閱","休閒","旅行","住宿","派對"] },
-  { id: "company", label: "公司", emoji: "💼", color: "#6B7280", subs: [] },
-  { id: "shopping", label: "購物", emoji: "🛍️", color: "#EC4899", subs: ["衣服","鞋子","包包","3C","書籍","生活用品","美妝保養","精品","禮物","網購","美容美髮"] },
-  { id: "personal", label: "個人", emoji: "💆", color: "#06B6D4", subs: ["社交","通話費","投資","稅金","保險","捐款","彩券","卡費"] },
-  { id: "medical", label: "醫療", emoji: "🏥", color: "#EF4444", subs: ["掛號費","藥費","醫療用品","打針","住院","手術","健康檢查"] },
-  { id: "family", label: "家居", emoji: "🏠", color: "#F97316", subs: ["房租","網路費","電話費","日常用品","水費","電費","燃料費","洗衣費","修繕費","家具","家電","西螺家"] },
-  { id: "education", label: "學習", emoji: "📚", color: "#10B981", subs: ["學費","補習班","課程","文具","書本"] },
-  { id: "other", label: "其他", emoji: "📌", color: "#9CA3AF", subs: [] },
-];
-
-const getCatById = (label) => CATEGORIES.find(c => c.label === label) || CATEGORIES[CATEGORIES.length - 1];
-
-const today = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-};
-
-// 修正日期格式，移除 T16:00:00.000Z
-const formatDate = (str) => {
-  if (!str) return "";
-  const s = String(str);
-  const clean = s.includes("T") ? s.split("T")[0] : s;
-  const parts = clean.split("-");
-  if (parts.length !== 3) return s;
-  return `${parts[0]}年${parts[1]}月${parts[2]}日`;
-};
-
-const cleanDate = (str) => {
-  if (!str) return "";
-  const s = String(str);
-  return s.includes("T") ? s.split("T")[0] : s;
-};
-
-const formatMoney = (n) => `$${Number(n).toLocaleString()}`;
-
-function Card({ children, style }) {
-  return <div style={{ background:"#fff", borderRadius:16, padding:20, marginBottom:16, boxShadow:"0 1px 8px rgba(0,0,0,0.06)", ...style }}>{children}</div>;
-}
-function SectionLabel({ children }) {
-  return <div style={{ fontSize:11, fontWeight:700, color:"#9CA3AF", letterSpacing:2, marginBottom:10, textTransform:"uppercase" }}>{children}</div>;
-}
-
-function App() {
-  const [tab, setTab] = useState(0);
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(today());
-  const [member, setMember] = useState(null);
-  const [category, setCategory] = useState(null);
-  const [subCategory, setSubCategory] = useState(null);
-  const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
-  const [toast, setToast] = useState(null);
-
-  const showToast = useCallback((msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
-  }, []);
-
-  const fetchRecords = useCallback(async () => {
-    try {
-      const res = await fetch(APPS_SCRIPT_URL);
-      if (!res.ok) { showToast(`❌ HTTP ${res.status}`, "error"); return; }
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); }
-      catch(e) { showToast(`❌ 回應格式錯誤`, "error"); return; }
-      if (data.status === "ok") {
-        const enriched = data.records.map(r => {
-          const cat = getCatById(r.categoryLabel);
-          const mem = MEMBERS.find(m => m.label === r.member) || MEMBERS[0];
-          return { ...r, date: cleanDate(r.date), category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, member: mem };
-        });
-        setRecords(enriched.reverse());
-      } else {
-        showToast(`❌ Sheets錯誤: ${data.message}`, "error");
-      }
-    } catch (err) {
-      showToast(`❌ 連線失敗: ${err.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => { fetchRecords(); }, [fetchRecords]);
-
-  const handleCategorySelect = (cat) => { setCategory(cat); setSubCategory(null); };
-
-  const handleSubmit = async () => {
-    if (!member) return showToast("請選擇成員", "error");
-    if (!category) return showToast("請選擇類別", "error");
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return showToast("請輸入有效金額", "error");
-
-    const record = {
-      id: Date.now(), date,
-      member: member.label,
-      category: category.id,
-      categoryLabel: category.label,
-      categoryEmoji: category.emoji,
-      categoryColor: category.color,
-      subCategory, amount: Number(amount), note,
-    };
-
-    const optimistic = { ...record, member };
-    setRecords(prev => [optimistic, ...prev]);
-    setMember(null); setCategory(null); setSubCategory(null); setAmount(""); setNote("");
-    showToast("⏳ 儲存中…");
-
-    try {
-      const params = new URLSearchParams({
-        action: "write",
-        id: String(record.id),
-        date: record.date,
-        member: record.member,
-        categoryLabel: record.categoryLabel,
-        subCategory: record.subCategory || "",
-        amount: String(record.amount),
-        note: record.note || "",
-      });
-      const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
-      if (!res.ok) { showToast(`❌ HTTP ${res.status}`, "error"); return; }
-      const text = await res.text();
-      let result;
-      try { result = JSON.parse(text); }
-      catch(e) { showToast(`❌ 回應格式錯誤`, "error"); return; }
-      if (result.status === "ok") {
-        showToast("✅ 記帳成功！");
-        fetchRecords();
-      } else {
-        showToast(`❌ 失敗: ${result.message}`, "error");
-      }
-    } catch (err) {
-      showToast(`❌ ${err.message}`, "error");
-    }
-  };
-
-  const handleDelete = async (id) => {
-    setRecords(prev => prev.filter(r => r.id !== id));
-    showToast("⏳ 刪除中…");
-    try {
-      const params = new URLSearchParams({ action: "delete", id: String(id) });
-      const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
-      const text = await res.text();
-      let result;
-      try { result = JSON.parse(text); } catch(e) { result = { status: "error" }; }
-      if (result.status === "ok") {
-        showToast("🗑 已刪除");
-        fetchRecords();
-      } else {
-        showToast(`❌ 刪除失敗`, "error");
-        fetchRecords();
-      }
-    } catch(err) {
-      showToast(`❌ 刪除失敗: ${err.message}`, "error");
-      fetchRecords();
-    }
-  };
-
-  const categoryTotals = CATEGORIES.map(cat => {
-    const total = records.filter(r => r.category === cat.id).reduce((s, r) => s + r.amount, 0);
-    return { ...cat, total };
-  }).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
-
-  const totalSpend = records.reduce((s, r) => s + r.amount, 0);
-
-  return (
-    <div style={{ fontFamily:"'Noto Sans TC',sans-serif", minHeight:"100vh", background:"#F8F7F4" }}>
-      {toast && (
-        <div style={{
-          position:"fixed", top:20, left:"50%", transform:"translateX(-50%)",
-          background: toast.type === "error" ? "#EF4444" : "#1a1a1a",
-          color:"#fff", padding:"10px 24px", borderRadius:99, zIndex:9999,
-          fontSize:14, fontWeight:600, boxShadow:"0 4px 24px rgba(0,0,0,0.18)",
-          animation:"fadeIn 0.2s ease", whiteSpace:"nowrap", maxWidth:"90vw",
-          overflow:"hidden", textOverflow:"ellipsis"
-        }}>{toast.msg}</div>
-      )}
-
-      <div style={{ background:"#1a1a1a", padding:"20px 20px 0", position:"sticky", top:0, zIndex:100 }}>
-        <div style={{ maxWidth:480, margin:"0 auto" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-            <div>
-              <div style={{ color:"#F59E0B", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase" }}>家庭共享</div>
-              <div style={{ color:"#fff", fontSize:22, fontWeight:900, lineHeight:1.2 }}>記帳本</div>
-            </div>
-            <div style={{ textAlign:"right" }}>
-              <div style={{ color:"#9CA3AF", fontSize:11 }}>總支出</div>
-              <div style={{ color:"#F59E0B", fontSize:20, fontWeight:900 }}>{formatMoney(totalSpend)}</div>
-            </div>
-          </div>
-          <div style={{ display:"flex", gap:4 }}>
-            {["記帳","報表"].map((t,i) => (
-              <button key={t} onClick={() => setTab(i)} style={{
-                flex:1, padding:"10px 0", border:"none", background:"transparent",
-                color: tab===i ? "#F59E0B" : "#6B7280", fontWeight:700, fontSize:15,
-                cursor:"pointer", borderBottom:`3px solid ${tab===i ? "#F59E0B" : "transparent"}`,
-                transition:"all 0.2s", fontFamily:"inherit"
-              }}>{t}</button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth:480, margin:"0 auto", padding:"20px 16px 80px" }}>
-        {tab === 0 ? (
-          <>
-            {loading && <div style={{ textAlign:"center", padding:"16px 0", color:"#9CA3AF", fontSize:14 }}>⏳ 載入資料中…</div>}
-            <FormView
-              date={date} setDate={setDate}
-              member={member} setMember={setMember}
-              category={category} onCategorySelect={handleCategorySelect}
-              subCategory={subCategory} setSubCategory={setSubCategory}
-              amount={amount} setAmount={setAmount}
-              note={note} setNote={setNote}
-              onSubmit={handleSubmit}
-              recentRecords={records.slice(0, 10)}
-              onDelete={handleDelete}
-            />
-          </>
-        ) : (
-          <DashboardView records={records} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function FormView({ date, setDate, member, setMember, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, recentRecords, onDelete }) {
-  const catObj = CATEGORIES.find(c => c.id === category?.id);
-  const [confirmId, setConfirmId] = useState(null);
-
-  return (
-    <>
-      <Card>
-        <SectionLabel>📅 日期</SectionLabel>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{
-          width:"100%", fontSize:18, fontWeight:700, border:"2px solid #F3F4F6",
-          borderRadius:12, padding:"10px 14px", color:"#1a1a1a", background:"#F9FAFB",
-          fontFamily:"inherit", outline:"none", cursor:"pointer", textAlign:"center"
-        }} />
-        <div style={{ marginTop:8, fontSize:13, color:"#9CA3AF", textAlign:"center" }}>{formatDate(date)}</div>
-      </Card>
-
-      <Card>
-        <SectionLabel>👤 成員</SectionLabel>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8 }}>
-          {MEMBERS.map(m => (
-            <button key={m.id} onClick={() => setMember(m)} style={{
-              padding:"12px 4px", border:`2px solid ${member?.id===m.id ? m.color : "#F3F4F6"}`,
-              borderRadius:12, background: member?.id===m.id ? m.color+"18" : "#F9FAFB",
-              cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
-            }}>
-              <div style={{ fontSize:22 }}>{m.emoji}</div>
-              <div style={{ fontSize:12, fontWeight:700, color: member?.id===m.id ? m.color : "#374151", marginTop:2 }}>{m.label}</div>
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <SectionLabel>🗂 主類別</SectionLabel>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6 }}>
-          {CATEGORIES.map(cat => (
-            <button key={cat.id} onClick={() => onCategorySelect(cat)} style={{
-              padding:"10px 4px", border:`2px solid ${category?.id===cat.id ? cat.color : "#F3F4F6"}`,
-              borderRadius:12, background: category?.id===cat.id ? cat.color+"18" : "#F9FAFB",
-              cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
-            }}>
-              <div style={{ fontSize:20 }}>{cat.emoji}</div>
-              <div style={{ fontSize:11, fontWeight:600, color: category?.id===cat.id ? cat.color : "#6B7280", marginTop:2 }}>{cat.label}</div>
-            </button>
-          ))}
-        </div>
-        {catObj && catObj.subs.length > 0 && (
-          <div style={{ marginTop:14, animation:"slideUp 0.2s ease" }}>
-            <SectionLabel>📎 子類別</SectionLabel>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-              {catObj.subs.map(sub => (
-                <button key={sub} onClick={() => setSubCategory(sub)} style={{
-                  padding:"6px 14px", border:`2px solid ${subCategory===sub ? catObj.color : "#E5E7EB"}`,
-                  borderRadius:99, background: subCategory===sub ? catObj.color : "#fff",
-                  color: subCategory===sub ? "#fff" : "#374151", fontSize:13, fontWeight:600,
-                  cursor:"pointer", transition:"all 0.15s", fontFamily:"inherit"
-                }}>{sub}</button>
-              ))}
-            </div>
-          </div>
-        )}
-      </Card>
-
-      <Card>
-        <SectionLabel>💰 金額</SectionLabel>
-        <div style={{ position:"relative" }}>
-          <span style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", fontSize:24, color:"#9CA3AF", fontWeight:700 }}>$</span>
-          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" min="0"
-            style={{ width:"100%", fontSize:36, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12,
-              padding:"14px 14px 14px 44px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", outline:"none" }} />
-        </div>
-        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2}
-          style={{ width:"100%", marginTop:12, fontSize:14, border:"2px solid #F3F4F6", borderRadius:12,
-            padding:"10px 14px", color:"#374151", background:"#F9FAFB", fontFamily:"inherit", outline:"none", resize:"none", lineHeight:1.6 }} />
-      </Card>
-
-      <button onClick={onSubmit}
-        onTouchStart={e => e.currentTarget.style.transform="scale(0.97)"}
-        onTouchEnd={e => e.currentTarget.style.transform="scale(1)"}
-        style={{ width:"100%", padding:"18px 0", background:"#1a1a1a", color:"#F59E0B",
-          border:"none", borderRadius:16, fontSize:17, fontWeight:900, cursor:"pointer",
-          letterSpacing:2, fontFamily:"inherit", boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>
-        ＋ 新增支出
-      </button>
-
-      {recentRecords.length > 0 && (
-        <div style={{ marginTop:24 }}>
-          <SectionLabel>🕐 最近記錄</SectionLabel>
-          {recentRecords.map(r => (
-            <div key={r.id} style={{
-              background:"#fff", borderRadius:14, padding:"12px 14px", marginBottom:8,
-              boxShadow:"0 1px 6px rgba(0,0,0,0.05)", animation:"slideUp 0.2s ease"
-            }}>
-              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ width:40, height:40, borderRadius:12, background:(r.categoryColor||"#ccc")+"22",
-                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>
-                  {r.categoryEmoji}
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <span style={{ fontWeight:700, fontSize:14, color:"#1a1a1a" }}>{r.categoryLabel}</span>
-                    {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF" }}>/ {r.subCategory}</span>}
-                    <span style={{ fontSize:11, color:"#9CA3AF", marginLeft:"auto" }}>
-                      {r.member?.emoji} {r.member?.label}
-                    </span>
-                  </div>
-                  <div style={{ fontSize:12, color:"#9CA3AF", marginTop:2 }}>{formatDate(r.date)}{r.note && ` · ${r.note}`}</div>
-                </div>
-                <div style={{ fontWeight:900, fontSize:15, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
-                <button onClick={() => setConfirmId(confirmId === r.id ? null : r.id)} style={{
-                  background:"none", border:"none", color:"#D1D5DB", cursor:"pointer", fontSize:18, padding:4, flexShrink:0
-                }}>🗑</button>
-              </div>
-              {confirmId === r.id && (
-                <div style={{ marginTop:10, display:"flex", gap:8, justifyContent:"flex-end" }}>
-                  <button onClick={() => setConfirmId(null)} style={{
-                    padding:"6px 16px", borderRadius:99, border:"2px solid #E5E7EB",
-                    background:"#fff", color:"#6B7280", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit"
-                  }}>取消</button>
-                  <button onClick={() => { onDelete(r.id); setConfirmId(null); }} style={{
-                    padding:"6px 16px", borderRadius:99, border:"none",
-                    background:"#EF4444", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit"
-                  }}>確認刪除</button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-function DashboardView({ records }) {
-  const now = new Date();
-  const [selYear, setSelYear] = useState(now.getFullYear());
-  const [selMonth, setSelMonth] = useState(now.getMonth() + 1);
-
-  // 取得所有有資料的年月
-  const months = [...new Set(records.map(r => {
-    const d = cleanDate(r.date);
-    return d ? d.slice(0,7) : null;
-  }).filter(Boolean))].sort().reverse();
-
-  const filtered = records.filter(r => {
-    const d = cleanDate(r.date);
-    if (!d) return false;
-    const [y, m] = d.split("-");
-    return Number(y) === selYear && Number(m) === selMonth;
-  });
-
-  const categoryTotals = CATEGORIES.map(cat => {
-    const total = filtered.filter(r => r.category === cat.id).reduce((s, r) => s + r.amount, 0);
-    return { ...cat, total };
-  }).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
-
-  const totalSpend = filtered.reduce((s, r) => s + r.amount, 0);
-
-  const RADIAN = Math.PI / 180;
-  const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-    if (percent < 0.05) return null;
-    const r = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + r * Math.cos(-midAngle * RADIAN);
-    const y = cy + r * Math.sin(-midAngle * RADIAN);
-    return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>{`${(percent*100).toFixed(0)}%`}</text>;
-  };
-
-  const prevMonth = () => {
-    if (selMonth === 1) { setSelYear(y => y-1); setSelMonth(12); }
-    else setSelMonth(m => m-1);
-  };
-  const nextMonth = () => {
-    if (selMonth === 12) { setSelYear(y => y+1); setSelMonth(1); }
-    else setSelMonth(m => m+1);
-  };
-  const isCurrentMonth = selYear === now.getFullYear() && selMonth === now.getMonth()+1;
-
-  return (
-    <>
-      {/* 月份選擇器 */}
-      <Card>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <button onClick={prevMonth} style={{
-            width:36, height:36, borderRadius:99, border:"2px solid #F3F4F6",
-            background:"#F9FAFB", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center"
-          }}>‹</button>
-          <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:20, fontWeight:900, color:"#1a1a1a" }}>{selYear}年{String(selMonth).padStart(2,"0")}月</div>
-            {isCurrentMonth && <div style={{ fontSize:11, color:"#F59E0B", fontWeight:700, marginTop:2 }}>本月</div>}
-          </div>
-          <button onClick={nextMonth} style={{
-            width:36, height:36, borderRadius:99, border:"2px solid #F3F4F6",
-            background:"#F9FAFB", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center"
-          }}>›</button>
-        </div>
-      </Card>
-
-      <Card style={{ background:"#1a1a1a" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <div>
-            <div style={{ color:"#9CA3AF", fontSize:12, fontWeight:600 }}>當月支出</div>
-            <div style={{ color:"#F59E0B", fontSize:32, fontWeight:900, letterSpacing:-1 }}>{formatMoney(totalSpend)}</div>
-          </div>
-          <div style={{ textAlign:"right" }}>
-            <div style={{ color:"#9CA3AF", fontSize:12, fontWeight:600 }}>筆數</div>
-            <div style={{ color:"#fff", fontSize:32, fontWeight:900 }}>{filtered.length}</div>
-          </div>
-        </div>
-      </Card>
-
-      {filtered.length === 0 ? (
-        <div style={{ textAlign:"center", padding:"40px 20px", color:"#9CA3AF" }}>
-          <div style={{ fontSize:48, marginBottom:12 }}>📭</div>
-          <div style={{ fontSize:16, fontWeight:700, color:"#374151" }}>這個月沒有記錄</div>
-        </div>
-      ) : (
-        <>
-          <Card>
-            <SectionLabel>📊 支出類別比例</SectionLabel>
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={categoryTotals} dataKey="total" nameKey="label" cx="50%" cy="50%"
-                  outerRadius={100} labelLine={false} label={renderLabel}>
-                  {categoryTotals.map((cat, i) => <Cell key={i} fill={cat.color} />)}
-                </Pie>
-                <Tooltip formatter={(v, n) => [formatMoney(v), n]} />
-                <Legend formatter={(value) => <span style={{ fontSize:12, fontWeight:600 }}>{value}</span>} />
-              </PieChart>
-            </ResponsiveContainer>
-          </Card>
-
-          <Card>
-            <SectionLabel>🏆 類別排行榜</SectionLabel>
-            {categoryTotals.map((cat) => (
-              <div key={cat.id} style={{ marginBottom:14 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-                  <div style={{ width:28, height:28, borderRadius:8, background:cat.color+"22",
-                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>{cat.emoji}</div>
-                  <span style={{ flex:1, fontWeight:700, fontSize:14, color:"#1a1a1a" }}>{cat.label}</span>
-                  <span style={{ fontWeight:900, fontSize:15, color:cat.color }}>{formatMoney(cat.total)}</span>
-                  <span style={{ fontSize:12, color:"#9CA3AF", width:36, textAlign:"right" }}>
-                    {totalSpend > 0 ? ((cat.total/totalSpend)*100).toFixed(1) : 0}%
-                  </span>
-                </div>
-                <div style={{ height:6, background:"#F3F4F6", borderRadius:99, overflow:"hidden" }}>
-                  <div style={{ height:"100%", background:cat.color, borderRadius:99,
-                    width:`${totalSpend > 0 ? (cat.total/totalSpend)*100 : 0}%`, transition:"width 0.5s ease" }} />
-                </div>
-              </div>
-            ))}
-          </Card>
-
-          <Card>
-            <SectionLabel>👥 成員支出</SectionLabel>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:10 }}>
-              {MEMBERS.map(m => {
-                const total = filtered.filter(r => r.member?.id === m.id).reduce((s,r) => s+r.amount, 0);
-                return (
-                  <div key={m.id} style={{
-                    background: total > 0 ? m.color+"12" : "#F9FAFB",
-                    border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`,
-                    borderRadius:14, padding:"14px 12px", textAlign:"center"
-                  }}>
-                    <div style={{ fontSize:28 }}>{m.emoji}</div>
-                    <div style={{ fontWeight:700, fontSize:13, color:"#374151", marginTop:4 }}>{m.label}</div>
-                    <div style={{ fontWeight:900, fontSize:17, color: total > 0 ? m.color : "#D1D5DB", marginTop:4 }}>{formatMoney(total)}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        </>
-      )}
-    </>
-  );
-}
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
-</script>
-</body>
-</html>
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>家庭記帳本</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
-<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Noto Sans TC', sans-serif; background: #F8F7F4; }
-  ::-webkit-scrollbar { display: none; }
-  @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
-  @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-  input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
-  input[type=number]::-webkit-inner-spin-button,
-  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-</style>
-</head>
-<body>
-<div id="root"></div>
-<script type="text/babel">
-const { useState, useEffect, useCallback } = React;
-const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
-
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyv5ROh9LiMjcDsfdp4u1pmpxKgCX0O9yJL02Bv2XC-SzDNwxbTKjK4XRh9SIOIyAtk/exec";
-
-const MEMBERS = [
-  { id: "dad", label: "騏騏", emoji: "👨", color: "#3B82F6" },
-  { id: "mom", label: "潔潔", emoji: "👩", color: "#EC4899" },
-  { id: "sister", label: "嫻嫻", emoji: "👧", color: "#8B5CF6" },
-  { id: "brother", label: "澤澤", emoji: "🧒", color: "#10B981" },
-  { id: "whole_family", label: "全家", emoji: "👨‍👩‍👧‍👦", color: "#F59E0B" },
-];
-
-const CATEGORIES = [
-  { id: "food", label: "飲食", emoji: "🍱", color: "#F59E0B", subs: ["早餐","午餐","晚餐","飲料","點心","宵夜","酒","水果","保健品","其他"] },
-  { id: "transport", label: "交通", emoji: "🚗", color: "#3B82F6", subs: ["公車","捷運","計程車","停車費","加油","高鐵","汽車","火車","摩托車"] },
-  { id: "entertainment", label: "娛樂", emoji: "🎮", color: "#8B5CF6", subs: ["電影","遊戲","KTV","展覽","運動","訂閱","休閒","旅行","住宿","派對"] },
-  { id: "company", label: "公司", emoji: "💼", color: "#6B7280", subs: [] },
-  { id: "shopping", label: "購物", emoji: "🛍️", color: "#EC4899", subs: ["衣服","鞋子","包包","3C","書籍","生活用品","美妝保養","精品","禮物","網購","美容美髮"] },
-  { id: "personal", label: "個人", emoji: "💆", color: "#06B6D4", subs: ["社交","通話費","投資","稅金","保險","捐款","彩券","卡費"] },
-  { id: "medical", label: "醫療", emoji: "🏥", color: "#EF4444", subs: ["掛號費","藥費","醫療用品","打針","住院","手術","健康檢查"] },
-  { id: "family", label: "家居", emoji: "🏠", color: "#F97316", subs: ["房租","網路費","電話費","日常用品","水費","電費","燃料費","洗衣費","修繕費","家具","家電","西螺家"] },
-  { id: "education", label: "學習", emoji: "📚", color: "#10B981", subs: ["學費","補習班","課程","文具","書本"] },
-  { id: "other", label: "其他", emoji: "📌", color: "#9CA3AF", subs: [] },
-];
-
-const getCatById = (label) => CATEGORIES.find(c => c.label === label) || CATEGORIES[CATEGORIES.length - 1];
-
-const today = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-};
-const formatDate = (str) => { const [y,m,d] = str.split("-"); return `${y}年${m}月${d}日`; };
-const formatMoney = (n) => `$${Number(n).toLocaleString()}`;
-
-function Card({ children, style }) {
-  return <div style={{ background:"#fff", borderRadius:16, padding:20, marginBottom:16, boxShadow:"0 1px 8px rgba(0,0,0,0.06)", ...style }}>{children}</div>;
-}
-function SectionLabel({ children }) {
-  return <div style={{ fontSize:11, fontWeight:700, color:"#9CA3AF", letterSpacing:2, marginBottom:10, textTransform:"uppercase" }}>{children}</div>;
-}
-
-function App() {
-  const [tab, setTab] = useState(0);
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(today());
-  const [member, setMember] = useState(null);
-  const [category, setCategory] = useState(null);
-  const [subCategory, setSubCategory] = useState(null);
-  const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
-  const [toast, setToast] = useState(null);
-
-  const showToast = useCallback((msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
-  }, []);
-
-  const fetchRecords = useCallback(async () => {
-    try {
-      const res = await fetch(APPS_SCRIPT_URL);
-      if (!res.ok) { showToast(`❌ HTTP ${res.status}`, "error"); return; }
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); }
-      catch(e) { showToast(`❌ 回應格式錯誤: ${text.slice(0,60)}`, "error"); return; }
-      if (data.status === "ok") {
-        const enriched = data.records.map(r => {
-          const cat = getCatById(r.categoryLabel);
-          const mem = MEMBERS.find(m => m.label === r.member) || MEMBERS[0];
-          return { ...r, category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, member: mem };
-        });
-        setRecords(enriched.reverse());
-      } else {
-        showToast(`❌ Sheets錯誤: ${data.message}`, "error");
-      }
-    } catch (err) {
-      showToast(`❌ 連線失敗: ${err.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => { fetchRecords(); }, [fetchRecords]);
-
-  const handleCategorySelect = (cat) => { setCategory(cat); setSubCategory(null); };
-
-  const handleSubmit = async () => {
-    if (!member) return showToast("請選擇成員", "error");
-    if (!category) return showToast("請選擇類別", "error");
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return showToast("請輸入有效金額", "error");
-
-    const record = {
-      id: Date.now(), date,
-      member: member.label,
-      category: category.id,
-      categoryLabel: category.label,
-      categoryEmoji: category.emoji,
-      categoryColor: category.color,
-      subCategory, amount: Number(amount), note,
-    };
-
-    const optimistic = { ...record, member };
-    setRecords(prev => [optimistic, ...prev]);
-    setMember(null); setCategory(null); setSubCategory(null); setAmount(""); setNote("");
-    showToast("⏳ 儲存中…");
-
-    try {
-      const params = new URLSearchParams({
-        action: "write",
-        id: String(record.id),
-        date: record.date,
-        member: record.member,
-        categoryLabel: record.categoryLabel,
-        subCategory: record.subCategory || "",
-        amount: String(record.amount),
-        note: record.note || "",
-      });
-      const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
-      if (!res.ok) { showToast(`❌ HTTP ${res.status}`, "error"); return; }
-      const text = await res.text();
-      let result;
-      try { result = JSON.parse(text); }
-      catch(e) { showToast(`❌ 回應格式錯誤: ${text.slice(0,60)}`, "error"); return; }
-      if (result.status === "ok") {
-        showToast("✅ 記帳成功！");
-        fetchRecords();
-      } else {
-        showToast(`❌ 失敗: ${result.message}`, "error");
-      }
-    } catch (err) {
-      showToast(`❌ ${err.message}`, "error");
-    }
-  };
-
-  const categoryTotals = CATEGORIES.map(cat => {
-    const total = records.filter(r => r.category === cat.id).reduce((s, r) => s + r.amount, 0);
-    return { ...cat, total };
-  }).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
-
-  const totalSpend = records.reduce((s, r) => s + r.amount, 0);
-
-  return (
-    <div style={{ fontFamily:"'Noto Sans TC',sans-serif", minHeight:"100vh", background:"#F8F7F4" }}>
-      {toast && (
-        <div style={{
-          position:"fixed", top:20, left:"50%", transform:"translateX(-50%)",
-          background: toast.type === "error" ? "#EF4444" : "#1a1a1a",
-          color:"#fff", padding:"10px 24px", borderRadius:99, zIndex:9999,
-          fontSize:14, fontWeight:600, boxShadow:"0 4px 24px rgba(0,0,0,0.18)",
-          animation:"fadeIn 0.2s ease", whiteSpace:"nowrap", maxWidth:"90vw",
-          overflow:"hidden", textOverflow:"ellipsis"
-        }}>{toast.msg}</div>
-      )}
-
-      {/* Header */}
-      <div style={{ background:"#1a1a1a", padding:"20px 20px 0", position:"sticky", top:0, zIndex:100 }}>
-        <div style={{ maxWidth:480, margin:"0 auto" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-            <div>
-              <div style={{ color:"#F59E0B", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase" }}>家庭共享</div>
-              <div style={{ color:"#fff", fontSize:22, fontWeight:900, lineHeight:1.2 }}>記帳本</div>
-            </div>
-            <div style={{ textAlign:"right" }}>
-              <div style={{ color:"#9CA3AF", fontSize:11 }}>總支出</div>
-              <div style={{ color:"#F59E0B", fontSize:20, fontWeight:900 }}>{formatMoney(totalSpend)}</div>
-            </div>
-          </div>
-          <div style={{ display:"flex", gap:4 }}>
-            {["記帳","報表"].map((t,i) => (
-              <button key={t} onClick={() => setTab(i)} style={{
-                flex:1, padding:"10px 0", border:"none", background:"transparent",
-                color: tab===i ? "#F59E0B" : "#6B7280", fontWeight:700, fontSize:15,
-                cursor:"pointer", borderBottom:`3px solid ${tab===i ? "#F59E0B" : "transparent"}`,
-                transition:"all 0.2s", fontFamily:"inherit"
-              }}>{t}</button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth:480, margin:"0 auto", padding:"20px 16px 80px" }}>
-        {tab === 0 ? (
-          <>
-            {loading && <div style={{ textAlign:"center", padding:"16px 0", color:"#9CA3AF", fontSize:14 }}>⏳ 載入資料中…</div>}
-            <FormView
-              date={date} setDate={setDate}
-              member={member} setMember={setMember}
-              category={category} onCategorySelect={handleCategorySelect}
-              subCategory={subCategory} setSubCategory={setSubCategory}
-              amount={amount} setAmount={setAmount}
-              note={note} setNote={setNote}
-              onSubmit={handleSubmit}
-              recentRecords={records.slice(0, 5)}
-              onDelete={(id) => setRecords(prev => prev.filter(r => r.id !== id))}
-            />
-          </>
-        ) : (
-          <DashboardView categoryTotals={categoryTotals} totalSpend={totalSpend} records={records} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function FormView({ date, setDate, member, setMember, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, recentRecords, onDelete }) {
-  const catObj = CATEGORIES.find(c => c.id === category?.id);
-  return (
-    <>
-      <Card>
-        <SectionLabel>📅 日期</SectionLabel>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{
-          width:"100%", fontSize:18, fontWeight:700, border:"2px solid #F3F4F6",
-          borderRadius:12, padding:"10px 14px", color:"#1a1a1a", background:"#F9FAFB",
-          fontFamily:"inherit", outline:"none", cursor:"pointer"
-        }} />
-        <div style={{ marginTop:8, fontSize:13, color:"#9CA3AF" }}>{formatDate(date)}</div>
-      </Card>
-
-      <Card>
-        <SectionLabel>👤 成員</SectionLabel>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8 }}>
-          {MEMBERS.map(m => (
-            <button key={m.id} onClick={() => setMember(m)} style={{
-              padding:"12px 4px", border:`2px solid ${member?.id===m.id ? m.color : "#F3F4F6"}`,
-              borderRadius:12, background: member?.id===m.id ? m.color+"18" : "#F9FAFB",
-              cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
-            }}>
-              <div style={{ fontSize:22 }}>{m.emoji}</div>
-              <div style={{ fontSize:12, fontWeight:700, color: member?.id===m.id ? m.color : "#374151", marginTop:2 }}>{m.label}</div>
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <SectionLabel>🗂 主類別</SectionLabel>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6 }}>
-          {CATEGORIES.map(cat => (
-            <button key={cat.id} onClick={() => onCategorySelect(cat)} style={{
-              padding:"10px 4px", border:`2px solid ${category?.id===cat.id ? cat.color : "#F3F4F6"}`,
-              borderRadius:12, background: category?.id===cat.id ? cat.color+"18" : "#F9FAFB",
-              cursor:"pointer", textAlign:"center", transition:"all 0.15s", fontFamily:"inherit"
-            }}>
-              <div style={{ fontSize:20 }}>{cat.emoji}</div>
-              <div style={{ fontSize:11, fontWeight:600, color: category?.id===cat.id ? cat.color : "#6B7280", marginTop:2 }}>{cat.label}</div>
-            </button>
-          ))}
-        </div>
-        {catObj && catObj.subs.length > 0 && (
-          <div style={{ marginTop:14, animation:"slideUp 0.2s ease" }}>
-            <SectionLabel>📎 子類別</SectionLabel>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-              {catObj.subs.map(sub => (
-                <button key={sub} onClick={() => setSubCategory(sub)} style={{
-                  padding:"6px 14px", border:`2px solid ${subCategory===sub ? catObj.color : "#E5E7EB"}`,
-                  borderRadius:99, background: subCategory===sub ? catObj.color : "#fff",
-                  color: subCategory===sub ? "#fff" : "#374151", fontSize:13, fontWeight:600,
-                  cursor:"pointer", transition:"all 0.15s", fontFamily:"inherit"
-                }}>{sub}</button>
-              ))}
-            </div>
-          </div>
-        )}
-      </Card>
-
-      <Card>
-        <SectionLabel>💰 金額</SectionLabel>
-        <div style={{ position:"relative" }}>
-          <span style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", fontSize:24, color:"#9CA3AF", fontWeight:700 }}>$</span>
-          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" min="0"
-            style={{ width:"100%", fontSize:36, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12,
-              padding:"14px 14px 14px 44px", color:"#1a1a1a", background:"#F9FAFB", fontFamily:"inherit", outline:"none" }} />
-        </div>
-        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2}
-          style={{ width:"100%", marginTop:12, fontSize:14, border:"2px solid #F3F4F6", borderRadius:12,
-            padding:"10px 14px", color:"#374151", background:"#F9FAFB", fontFamily:"inherit", outline:"none", resize:"none", lineHeight:1.6 }} />
-      </Card>
-
-      <button onClick={onSubmit}
-        onTouchStart={e => e.currentTarget.style.transform="scale(0.97)"}
-        onTouchEnd={e => e.currentTarget.style.transform="scale(1)"}
-        style={{ width:"100%", padding:"18px 0", background:"#1a1a1a", color:"#F59E0B",
-          border:"none", borderRadius:16, fontSize:17, fontWeight:900, cursor:"pointer",
-          letterSpacing:2, fontFamily:"inherit", boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>
-        ＋ 新增支出
-      </button>
-
-      {recentRecords.length > 0 && (
-        <div style={{ marginTop:24 }}>
-          <SectionLabel>🕐 最近記錄</SectionLabel>
-          {recentRecords.map(r => (
-            <div key={r.id} style={{
-              display:"flex", alignItems:"center", gap:12,
-              background:"#fff", borderRadius:14, padding:"12px 14px", marginBottom:8,
-              boxShadow:"0 1px 6px rgba(0,0,0,0.05)", animation:"slideUp 0.2s ease"
-            }}>
-              <div style={{ width:40, height:40, borderRadius:12, background:(r.categoryColor||"#ccc")+"22",
-                display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>
-                {r.categoryEmoji}
-              </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                  <span style={{ fontWeight:700, fontSize:14, color:"#1a1a1a" }}>{r.categoryLabel}</span>
-                  {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF" }}>/ {r.subCategory}</span>}
-                  <span style={{ fontSize:11, color:"#9CA3AF", marginLeft:"auto" }}>
-                    {r.member?.emoji} {r.member?.label}
-                  </span>
-                </div>
-                <div style={{ fontSize:12, color:"#9CA3AF", marginTop:2 }}>{formatDate(r.date)}{r.note && ` · ${r.note}`}</div>
-              </div>
-              <div style={{ fontWeight:900, fontSize:15, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
-              <button onClick={() => onDelete(r.id)} style={{
-                background:"none", border:"none", color:"#D1D5DB", cursor:"pointer", fontSize:18, padding:4, flexShrink:0
-              }}>×</button>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-function DashboardView({ categoryTotals, totalSpend, records }) {
-  const RADIAN = Math.PI / 180;
-  const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-    if (percent < 0.05) return null;
-    const r = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + r * Math.cos(-midAngle * RADIAN);
-    const y = cy + r * Math.sin(-midAngle * RADIAN);
-    return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>{`${(percent*100).toFixed(0)}%`}</text>;
-  };
-
-  if (records.length === 0) {
-    return (
-      <div style={{ textAlign:"center", padding:"60px 20px", color:"#9CA3AF" }}>
-        <div style={{ fontSize:60, marginBottom:16 }}>📊</div>
-        <div style={{ fontSize:18, fontWeight:700, color:"#374151" }}>尚無支出記錄</div>
-        <div style={{ fontSize:14, marginTop:8 }}>前往「記帳」頁面新增第一筆支出</div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <Card style={{ background:"#1a1a1a" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <div>
-            <div style={{ color:"#9CA3AF", fontSize:12, fontWeight:600 }}>總支出金額</div>
-            <div style={{ color:"#F59E0B", fontSize:32, fontWeight:900, letterSpacing:-1 }}>{formatMoney(totalSpend)}</div>
-          </div>
-          <div style={{ textAlign:"right" }}>
-            <div style={{ color:"#9CA3AF", fontSize:12, fontWeight:600 }}>筆數</div>
-            <div style={{ color:"#fff", fontSize:32, fontWeight:900 }}>{records.length}</div>
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <SectionLabel>📊 支出類別比例</SectionLabel>
-        <ResponsiveContainer width="100%" height={260}>
-          <PieChart>
-            <Pie data={categoryTotals} dataKey="total" nameKey="label" cx="50%" cy="50%"
-              outerRadius={100} labelLine={false} label={renderLabel}>
-              {categoryTotals.map((cat, i) => <Cell key={i} fill={cat.color} />)}
-            </Pie>
-            <Tooltip formatter={(v, n) => [formatMoney(v), n]} />
-            <Legend formatter={(value) => <span style={{ fontSize:12, fontWeight:600 }}>{value}</span>} />
-          </PieChart>
-        </ResponsiveContainer>
-      </Card>
-
-      <Card>
-        <SectionLabel>🏆 類別排行榜</SectionLabel>
-        {categoryTotals.map((cat) => (
-          <div key={cat.id} style={{ marginBottom:14 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-              <div style={{ width:28, height:28, borderRadius:8, background:cat.color+"22",
-                display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>{cat.emoji}</div>
-              <span style={{ flex:1, fontWeight:700, fontSize:14, color:"#1a1a1a" }}>{cat.label}</span>
-              <span style={{ fontWeight:900, fontSize:15, color:cat.color }}>{formatMoney(cat.total)}</span>
-              <span style={{ fontSize:12, color:"#9CA3AF", width:36, textAlign:"right" }}>
-                {totalSpend > 0 ? ((cat.total/totalSpend)*100).toFixed(1) : 0}%
-              </span>
-            </div>
-            <div style={{ height:6, background:"#F3F4F6", borderRadius:99, overflow:"hidden" }}>
-              <div style={{ height:"100%", background:cat.color, borderRadius:99,
-                width:`${totalSpend > 0 ? (cat.total/totalSpend)*100 : 0}%`, transition:"width 0.5s ease" }} />
-            </div>
-          </div>
-        ))}
-      </Card>
-
-      <Card>
-        <SectionLabel>👥 成員支出</SectionLabel>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:10 }}>
-          {MEMBERS.map(m => {
-            const total = records.filter(r => r.member?.id === m.id).reduce((s,r) => s+r.amount, 0);
             return (
-              <div key={m.id} style={{
-                background: total > 0 ? m.color+"12" : "#F9FAFB",
-                border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`,
-                borderRadius:14, padding:"14px 12px", textAlign:"center"
-              }}>
-                <div style={{ fontSize:28 }}>{m.emoji}</div>
-                <div style={{ fontWeight:700, fontSize:13, color:"#374151", marginTop:4 }}>{m.label}</div>
-                <div style={{ fontWeight:900, fontSize:17, color: total > 0 ? m.color : "#D1D5DB", marginTop:4 }}>{formatMoney(total)}</div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-    </>
-  );
-}
+                <div style={{ minHeight:"100vh", paddingBottom:40 }}>
+                    {toast && <div style={{ position:"fixed", top:20, left:"50%", transform:"translateX(-50%)", background: toast.type==="error"?"#EF4444":"#1a1a1a", color:"#fff", padding:"12px 24px", borderRadius:50, zIndex:1000, boxShadow:"0 4px 15px rgba(0,0,0,0.2)", animation:"fadeIn 0.3s" }}>{toast.msg}</div>}
+                    
+                    <div style={{ background:"#1a1a1a", color:"#fff", padding:"24px 20px 10px", position:"sticky", top:0, zIndex:100 }}>
+                        <div style={{ maxWidth:480, margin:"0 auto", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <h1 style={{ fontSize:24, fontWeight:900 }}>家庭記帳本</h1>
+                            <div style={{ textAlign:"right" }}>
+                                <div style={{ fontSize:10, color:"#9CA3AF" }}>總支出</div>
+                                <div style={{ fontSize:20, fontWeight:900, color:"#F59E0B" }}>{formatMoney(records.reduce((s,r)=>s+r.amount, 0))}</div>
+                            </div>
+                        </div>
+                        <div style={{ display:"flex", maxWidth:480, margin:"15px auto 0", gap:10 }}>
+                            <button onClick={()=>setTab(0)} style={{ flex:1, padding:"10px", background:"none", border:"none", color:tab===0?"#F59E0B":"#6B7280", borderBottom:tab===0?"3px solid #F59E0B":"none", fontWeight:700 }}>記帳</button>
+                            <button onClick={()=>setTab(1)} style={{ flex:1, padding:"10px", background:"none", border:"none", color:tab===1?"#F59E0B":"#6B7280", borderBottom:tab===1?"3px solid #F59E0B":"none", fontWeight:700 }}>報表分析</button>
+                        </div>
+                    </div>
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
-</script>
+                    <div style={{ maxWidth:480, margin:"0 auto", padding:16 }}>
+                        {tab === 0 ? (
+                            <FormView 
+                                date={date} setDate={setDate} member={member} setMember={setMember}
+                                category={category} setCategory={setCategory} subCategory={subCategory} setSubCategory={setSubCategory}
+                                amount={amount} setAmount={setAmount} note={note} setNote={setNote}
+                                onSubmit={handleSubmit} records={records.slice(0,10)} onDelete={handleDelete} loading={loading}
+                            />
+                        ) : (
+                            <DashboardView records={records} />
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function FormView({ date, setDate, member, setMember, category, setCategory, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, records, onDelete, loading }) {
+            return (
+                <div style={{ animation: "fadeIn 0.3s ease-out" }}>
+                    <Card>
+                        <div className="date-input-container">
+                            <div style={{ fontSize:12, color:"#9CA3AF", marginBottom:8, fontWeight:700 }}>📅 日期選擇</div>
+                            <input type="date" value={date} onChange={e=>setDate(e.target.value)} />
+                            <div style={{ marginTop:8, fontSize:14, fontWeight:700, color:"#374151" }}>{formatDate(date)}</div>
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <div style={{ fontSize:12, color:"#9CA3AF", marginBottom:12, fontWeight:700 }}>👤 選擇成員</div>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8 }}>
+                            {MEMBERS.map(m => (
+                                <button key={m.id} onClick={()=>setMember(m)} style={{ padding:"10px 0", borderRadius:12, border:member?.id===m.id?`2px solid ${m.color}`:"2px solid #F3F4F6", background:member?.id===m.id?m.color+"15":"#fff" }}>
+                                    <div style={{ fontSize:20 }}>{m.emoji}</div>
+                                    <div style={{ fontSize:11, fontWeight:700 }}>{m.label}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <div style={{ fontSize:12, color:"#9CA3AF", marginBottom:12, fontWeight:700 }}>🗂 類別</div>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8 }}>
+                            {CATEGORIES.map(cat => (
+                                <button key={cat.id} onClick={()=>setCategory(cat)} style={{ padding:"10px 0", borderRadius:12, border:category?.id===cat.id?`2px solid ${cat.color}`:"2px solid #F3F4F6", background:category?.id===cat.id?cat.color+"15":"#fff" }}>
+                                    <div style={{ fontSize:20 }}>{cat.emoji}</div>
+                                    <div style={{ fontSize:11, fontWeight:700 }}>{cat.label}</div>
+                                </button>
+                            ))}
+                        </div>
+                        {category?.subs.length > 0 && (
+                            <div style={{ marginTop:15, display:"flex", flexWrap:"wrap", gap:8 }}>
+                                {category.subs.map(s => (
+                                    <button key={s} onClick={()=>setSubCategory(s)} style={{ padding:"6px 12px", borderRadius:20, border:subCategory===s?`2px solid ${category.color}`:"1px solid #E5E7EB", fontSize:12, background:subCategory===s?category.color:"#fff", color:subCategory===s?"#fff":"#1a1a1a" }}>{s}</button>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+
+                    <Card>
+                        <div style={{ fontSize:12, color:"#9CA3AF", marginBottom:8, fontWeight:700 }}>💰 金額 & 備註</div>
+                        <input type="number" placeholder="0" value={amount} onChange={e=>setAmount(e.target.value)} style={{ width:"100%", padding:15, border:"2px solid #F3F4F6", borderRadius:12, fontSize:28, fontWeight:900, marginBottom:10, textAlign:"center" }} />
+                        <textarea placeholder="備註內容..." value={note} onChange={e=>setNote(e.target.value)} style={{ width:"100%", padding:12, border:"2px solid #F3F4F6", borderRadius:12, fontSize:14, minHeight:60, fontFamily:"inherit" }} />
+                    </Card>
+
+                    <button onClick={onSubmit} style={{ width:"100%", padding:18, background:"#1a1a1a", color:"#F59E0B", border:"none", borderRadius:20, fontSize:18, fontWeight:900, marginBottom:30 }}>＋ 新增支出</button>
+
+                    <div style={{ fontSize:12, color:"#9CA3AF", marginBottom:12, fontWeight:700 }}>🕐 最近紀錄 (點擊刪除)</div>
+                    {loading ? <div style={{ textAlign:"center", padding:20 }}>載入中...</div> : records.map(r => (
+                        <div key={r.id} style={{ background:"#fff", borderRadius:16, padding:15, marginBottom:10, display:"flex", alignItems:"center", gap:12 }}>
+                            <div style={{ width:45, height:45, borderRadius:12, background:r.catObj.color+"20", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>{r.catObj.emoji}</div>
+                            <div style={{ flex:1 }}>
+                                <div style={{ fontWeight:700, fontSize:15 }}>{r.categoryLabel} <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:400 }}>{r.subCategory && `| ${r.subCategory}`}</span></div>
+                                <div style={{ fontSize:11, color:"#9CA3AF" }}>{formatDate(r.date)} · {r.member} {r.note && ` · ${r.note}`}</div>
+                            </div>
+                            <div style={{ textAlign:"right" }}>
+                                <div style={{ fontWeight:900, color:r.catObj.color }}>{formatMoney(r.amount)}</div>
+                                <button onClick={()=>onDelete(r.id)} style={{ background:"none", border:"none", color:"#D1D5DB", fontSize:12, marginTop:4 }}>刪除</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function DashboardView({ records }) {
+            const [selYear, setSelYear] = useState(new Date().getFullYear());
+            const [selMonth, setSelMonth] = useState(new Date().getMonth() + 1);
+
+            const filtered = records.filter(r => {
+                const [y, m] = r.date.split("-");
+                return Number(y) === selYear && Number(m) === selMonth;
+            });
+
+            const catStats = CATEGORIES.map(cat => {
+                const total = filtered.filter(r => r.categoryLabel === cat.label).reduce((s,r)=>s+r.amount, 0);
+                return { name: cat.label, value: total, color: cat.color };
+            }).filter(c => c.value > 0).sort((a,b)=>b.value - a.value);
+
+            const totalMonth = filtered.reduce((s,r)=>s+r.amount, 0);
+
+            const nextMonth = () => { if(selMonth===12){ setSelYear(y=>y+1); setSelMonth(1); } else setSelMonth(m=>m+1); };
+            const prevMonth = () => { if(selMonth===1){ setSelYear(y=>y-1); setSelMonth(12); } else setSelMonth(m=>m-1); };
+
+            return (
+                <div style={{ animation: "fadeIn 0.3s ease-out" }}>
+                    <Card style={{ display:"flex", alignItems:"center", justifyContent:"space-between", textAlign:"center" }}>
+                        <button onClick={prevMonth} style={{ background:"#F3F4F6", border:"none", padding:"10px 15px", borderRadius:12 }}>◀</button>
+                        <div style={{ fontSize:20, fontWeight:900 }}>{selYear} 年 {selMonth} 月</div>
+                        <button onClick={nextMonth} style={{ background:"#F3F4F6", border:"none", padding:"10px 15px", borderRadius:12 }}>▶</button>
+                    </Card>
+
+                    <Card style={{ background:"#1a1a1a", color:"#fff", textAlign:"center" }}>
+                        <div style={{ color:"#9CA3AF", fontSize:13 }}>本月支出金額</div>
+                        <div style={{ fontSize:36, fontWeight:900, color:"#F59E0B" }}>{formatMoney(totalMonth)}</div>
+                        <div style={{ fontSize:12, marginTop:4 }}>共計 {filtered.length} 筆</div>
+                    </Card>
+
+                    {filtered.length > 0 ? (
+                        <>
+                            <Card>
+                                <div style={{ fontSize:12, color:"#9CA3AF", marginBottom:15, fontWeight:700 }}>📊 類別佔比</div>
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <PieChart>
+                                        <Pie data={catStats} dataKey="value" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                                            {catStats.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                                        </Pie>
+                                        <Tooltip formatter={(v)=>[formatMoney(v), "金額"]} />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </Card>
+                            <Card>
+                                <div style={{ fontSize:12, color:"#9CA3AF", marginBottom:15, fontWeight:700 }}>🏆 支出排行榜</div>
+                                {catStats.map(c => (
+                                    <div key={c.name} style={{ display:"flex", alignItems:"center", marginBottom:12, gap:10 }}>
+                                        <div style={{ flex:1 }}>
+                                            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                                                <span style={{ fontWeight:700, fontSize:14 }}>{c.name}</span>
+                                                <span style={{ fontWeight:900 }}>{formatMoney(c.value)}</span>
+                                            </div>
+                                            <div style={{ height:6, background:"#F3F4F6", borderRadius:10 }}>
+                                                <div style={{ height:"100%", background:c.color, borderRadius:10, width:`${(c.value/totalMonth*100)}%` }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </Card>
+                        </>
+                    ) : (
+                        <div style={{ textAlign:"center", padding:50, color:"#9CA3AF" }}>這個月沒有紀錄哦 ☕️</div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<App />);
+    </script>
 </body>
 </html>
