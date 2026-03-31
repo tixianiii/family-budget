@@ -340,21 +340,32 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
           {recentRecords.map(r => (
             <div key={r.id} style={{ background:"#fff", borderRadius:14, padding:"12px 14px", marginBottom:8, boxShadow:"0 1px 6px rgba(0,0,0,0.05)" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                
+                {/* 1. 類別圖示 */}
                 <div style={{ width:40, height:40, borderRadius:12, background:(r.categoryColor||"#ccc")+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>
                   {r.categoryEmoji}
                 </div>
+                
+                {/* 2. 中間資訊區 (包含類別、成員、乾淨的日期、備註) */}
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                     <span style={{ fontWeight:700, fontSize:14, color:"#1a1a1a" }}>{r.categoryLabel}</span>
                     {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF" }}>/ {r.subCategory}</span>}
                     <span style={{ fontSize:11, color:"#9CA3AF", marginLeft:"auto" }}>{r.member?.emoji} {r.member?.label}</span>
                   </div>
-                  <div style={{ fontSize:12, color:"#9CA3AF", marginTop:2 }}>{formatDate(r.date)}{r.note && ` · ${r.note}`}</div>
+                  
+                  {/* 👇 這裡就是顯示乾淨日期跟備註的地方 */}
+                  <div style={{ fontSize:12, color:"#9CA3AF", marginTop:2 }}>
+                    {formatDate(r.date)}{r.note && ` · ${r.note}`}
+                  </div>
                 </div>
+
+                {/* 3. 右側金額與刪除按鈕 */}
                 <div style={{ fontWeight:900, fontSize:15, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
-                {/* 傳遞 id 與 date 給後端 */}
                 <button onClick={() => setConfirmId(confirmId === r.id ? null : r.id)} style={{ background:"none", border:"none", color:"#D1D5DB", cursor:"pointer", fontSize:18, padding:4, flexShrink:0 }}>🗑</button>
               </div>
+              
+              {/* 刪除確認區塊 */}
               {confirmId === r.id && (
                 <div style={{ marginTop:10, display:"flex", gap:8, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}>
                   <button onClick={() => setConfirmId(null)} style={{ padding:"6px 16px", borderRadius:99, border:"2px solid #E5E7EB", background:"#fff", color:"#6B7280", fontSize:13, fontWeight:600, cursor:"pointer" }}>取消</button>
