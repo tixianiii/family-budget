@@ -50,7 +50,7 @@ const MEMBERS = [
   { id: "dad", label: "騏騏", emoji: "👨", color: "#3B82F6" },
   { id: "mom", label: "潔潔", emoji: "👩", color: "#EC4899" },
   { id: "sister", label: "嫻嫻", emoji: "👧", color: "#8B5CF6" },
-  // 🌟 只有這裡改變：後面加上 image: "zeze.png"
+  // 🌟 澤澤專屬圖片設定
   { id: "brother", label: "澤澤", emoji: "🧒", color: "#10B981", image: "zeze.png" }, 
   { id: "whole_family", label: "全家", emoji: "👨‍👩‍👧‍👦", color: "#F59E0B" },
 ];
@@ -94,6 +94,7 @@ const formatMoney = (n) => `$${Number(n).toLocaleString()}`;
 function Card({ children, style }) {
   return <div style={{ background:"#fff", borderRadius:16, padding:24, marginBottom:16, boxShadow:"0 1px 8px rgba(0,0,0,0.06)", ...style }}>{children}</div>;
 }
+
 function SectionLabel({ children }) {
   return <div style={{ fontSize:14, fontWeight:900, color:"#9CA3AF", letterSpacing:1.5, marginBottom:12 }}>{children}</div>;
 }
@@ -479,7 +480,6 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
                     {r.categoryEmoji}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    {/* 🌟 修改這裡：套用 100px 寬度限制、白名單 nowrap 防斷行 */}
                     <div style={{ display:"flex", alignItems:"center" }}>
                       <div style={{ width: "100px", display:"flex", alignItems:"center", gap:4 }}>
                         <span style={{ fontWeight:900, fontSize:16, color:"#1a1a1a", whiteSpace: "nowrap" }}>{r.categoryLabel}</span>
@@ -490,17 +490,14 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
                     <div style={{ fontSize:13, color:"#9CA3AF", marginTop:4, fontWeight:500 }}>{r.note || "無備註"}</div>
                   </div>
                   
-                  {/* 🌟 金額字體從 17 縮小到 15 */}
                   <div style={{ fontWeight:900, fontSize:15, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
                   
-                  {/* 🌟 按鈕區塊：間距縮小為 0、按鈕內距縮小為 2、字體縮為 14、靠攏 */}
                   <div style={{ display: "flex", gap: 0, marginLeft: 4, flexShrink:0 }}>
                     <button onClick={() => { setEditId(r.id); setEditAmount(r.amount); setEditNote(r.note || ""); setConfirmId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, padding:2 }}>✏️</button>
                     <button onClick={() => { setConfirmId(confirmId === r.id ? null : r.id); setEditId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, padding:2 }}>🗑</button>
                   </div>
                 </div>
 
-                {/* 刪除確認展開區 */}
                 {confirmId === r.id && (
                   <div style={{ marginTop:14, paddingTop: 12, borderTop: "1px dashed #E5E7EB", display:"flex", gap:10, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}>
                     <button onClick={() => setConfirmId(null)} style={{ padding:"6px 16px", borderRadius:99, border:"1px solid #E5E7EB", background:"#F3F4F6", color:"#4B5563", fontSize:13, fontWeight:700, cursor:"pointer" }}>取消</button>
@@ -508,7 +505,6 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
                   </div>
                 )}
 
-                {/* 內聯編輯展開區 */}
                 {editId === r.id && (
                   <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed #E5E7EB", animation: "slideUp 0.2s ease" }}>
                     <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -623,12 +619,14 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
                 const total = records.filter(r => r.member?.id === m.id).reduce((s,r) => s+r.amount, 0);
                 return (
                   <div key={m.id} style={{ background: total > 0 ? m.color+"12" : "#F9FAFB", border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`, borderRadius:16, padding:"18px 14px", textAlign:"center" }}>
-                    {/* 🌟 判斷：如果有圖片就顯示圖片，沒有就顯示原本的 Emoji */}
-                     {m.image ? (
-                       <img src={m.image} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", margin: "0 auto", marginBottom: 6, display: "block" }} alt={m.label} />
-                     ) : (
-                       <div style={{ fontSize:32 }}>{m.emoji}</div>
-                     )}
+                    
+                    {/* 🌟 只有這裡：判斷有圖片就顯示圖片，沒有就顯示 Emoji */}
+                    {m.image ? (
+                      <img src={m.image} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", margin: "0 auto", marginBottom: 6, display: "block" }} alt={m.label} />
+                    ) : (
+                      <div style={{ fontSize:32 }}>{m.emoji}</div>
+                    )}
+                    
                     <div style={{ fontWeight:900, fontSize:15, color:"#374151", marginTop:6 }}>{m.label}</div>
                     <div style={{ fontWeight:900, fontSize:20, color: total > 0 ? m.color : "#D1D5DB", marginTop:6 }}>{formatMoney(total)}</div>
                   </div>
