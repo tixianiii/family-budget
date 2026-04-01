@@ -34,7 +34,7 @@
   <div style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #1a1a1a; font-family: 'Noto Sans TC', sans-serif;">
     <div style="font-size: 72px; margin-bottom: 20px; animation: slideUp 0.5s ease;">📒</div>
     <div style="color: #F59E0B; font-size: 28px; font-weight: 900; letter-spacing: 4px; animation: fadeIn 0.8s ease;">家庭記帳本</div>
-    <div style="color: #9CA3AF; font-size: 16px; font-weight: 700; margin-top: 16px; animation: fadeIn 1.2s ease;">正在準備畫面，請稍候...</div>
+    <div style="color: #9CA3AF; font-size: 16px; font-weight: 700; margin-top: 16px; animation: fadeIn 1.2s ease;">正在載入資料，請稍候...</div>
   </div>
 </div>
 
@@ -94,6 +94,83 @@ function Card({ children, style }) {
 }
 function SectionLabel({ children }) {
   return <div style={{ fontSize:14, fontWeight:900, color:"#9CA3AF", letterSpacing:1.5, marginBottom:12 }}>{children}</div>;
+}
+
+// 🌟 全新的月曆選擇器元件
+function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear, setSelMonth }) {
+  const daysInMonth = new Date(selYear, selMonth, 0).getDate();
+  const firstDay = new Date(selYear, selMonth - 1, 1).getDay(); // 0-6
+
+  const dailyTotals = {};
+  records.forEach(r => {
+    const d = cleanDate(r.date);
+    dailyTotals[d] = (dailyTotals[d] || 0) + r.amount;
+  });
+
+  const handlePrevMonth = () => {
+    let newY = selYear, newM = selMonth - 1;
+    if (newM === 0) { newY -= 1; newM = 12; }
+    setSelYear(newY); setSelMonth(newM);
+    setDate(`${newY}-${String(newM).padStart(2,'0')}-01`); // 切換月份時預設選取1號
+  };
+
+  const handleNextMonth = () => {
+    let newY = selYear, newM = selMonth + 1;
+    if (newM === 13) { newY += 1; newM = 1; }
+    setSelYear(newY); setSelMonth(newM);
+    setDate(`${newY}-${String(newM).padStart(2,'0')}-01`);
+  };
+
+  const days = [];
+  for (let i = 0; i < firstDay; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+  const todayStr = today();
+
+  return (
+    <Card style={{ padding: "18px 16px" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: 16 }}>
+        <button onClick={handlePrevMonth} style={{ width:40, height:40, background:"#F9FAFB", border:"none", borderRadius:12, fontSize: 24, cursor:"pointer", color:"#374151", fontWeight:900 }}>‹</button>
+        <div style={{ fontSize: 22, fontWeight: 900, color:"#1a1a1a", letterSpacing: 2 }}>{selYear}年{selMonth}月</div>
+        <button onClick={handleNextMonth} style={{ width:40, height:40, background:"#F9FAFB", border:"none", borderRadius:12, fontSize: 24, cursor:"pointer", color:"#374151", fontWeight:900 }}>›</button>
+      </div>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", textAlign: "center", color: "#9CA3AF", fontSize: 14, fontWeight: 900, marginBottom: 12 }}>
+        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+      </div>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
+        {days.map((day, idx) => {
+          if (!day) return <div key={`empty-${idx}`} />;
+          const currentCellDateStr = `${selYear}-${String(selMonth).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          const isSelected = date === currentCellDateStr;
+          const isToday = todayStr === currentCellDateStr;
+          const total = dailyTotals[currentCellDateStr] || 0;
+
+          return (
+            <div key={day}
+              onClick={() => setDate(currentCellDateStr)}
+              style={{
+                height: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                borderRadius: 14, cursor: "pointer",
+                background: isSelected ? "#F59E0B" : total > 0 ? "#FEE2E2" : "transparent",
+                color: isSelected ? "#fff" : "#1a1a1a",
+                border: isToday && !isSelected ? "2px solid #F59E0B" : "2px solid transparent",
+                transition: "all 0.15s"
+              }}
+            >
+              <div style={{ fontSize: 18, fontWeight: 900 }}>{isToday ? "今" : day}</div>
+              {total > 0 && (
+                <div style={{ fontSize: 11, fontWeight: 900, color: isSelected ? "#FFFBEB" : "#EF4444", marginTop: 2 }}>
+                  -{total}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
 }
 
 function App() {
@@ -160,42 +237,32 @@ function App() {
       setSelMonth(Number(m));
     }
   }, [date]);
- // 🌟 新增：改良版手勢偵測 (下拉重刷整個網頁，完美支援 iPhone)
+
+  // 🌟 改良版手勢偵測 (下拉重刷整個網頁，完美支援 iPhone)
   useEffect(() => {
     let startY = 0;
     let currentY = 0;
     let isAtTop = false;
 
     const handleTouchStart = (e) => {
-      // 改成 <= 0 是因為 iPhone 往下拉時，scrollY 會變成負數
       if (window.scrollY <= 0) {
         startY = e.touches[0].clientY;
         currentY = startY;
         isAtTop = true;
-      } else {
-        isAtTop = false;
-      }
+      } else { isAtTop = false; }
     };
 
-    const handleTouchMove = (e) => {
-      if (isAtTop) {
-        currentY = e.touches[0].clientY;
-      }
-    };
+    const handleTouchMove = (e) => { if (isAtTop) currentY = e.touches[0].clientY; };
 
     const handleTouchEnd = () => {
       if (isAtTop) {
         const pullDistance = currentY - startY;
-        // 往下拉超過 100px 且「手指放開」時才觸發，這比較符合真實 App 的手感
         if (pullDistance > 100) {
           showToast("🔄 重新載入最新資料...");
           setTimeout(() => window.location.reload(), 300);
         }
       }
-      // 歸零
-      startY = 0;
-      currentY = 0;
-      isAtTop = false;
+      startY = 0; currentY = 0; isAtTop = false;
     };
 
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -275,8 +342,7 @@ function App() {
                 <div style={{ color:"#F59E0B", fontSize:13, fontWeight:700, letterSpacing:3, textTransform:"uppercase" }}>家庭共享</div>
                 <div style={{ color:"#fff", fontSize:26, fontWeight:900, marginTop:2 }}>記帳本</div>
               </div>
-              
-              <button onClick={() => fetchRecords(selYear, selMonth)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", padding:5, opacity:0.8 }}>🔄</button>
+              <button onClick={() => window.location.reload()} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", padding:5, opacity:0.8 }}>🔄</button>
               
               {tab === 0 && (
                 <div style={{ marginLeft: 4, padding: "6px 12px", background: "#333", borderRadius: 12, border: "1px solid #444", animation: "fadeIn 0.3s ease" }}>
@@ -311,7 +377,11 @@ function App() {
             category={category} onCategorySelect={handleCategorySelect}
             subCategory={subCategory} setSubCategory={setSubCategory}
             amount={amount} setAmount={setAmount} note={note} setNote={setNote}
-            onSubmit={handleSubmit} recentRecords={records.slice(0, 10)} onDelete={handleDelete} loading={loading}
+            onSubmit={handleSubmit} 
+            selectedDateRecords={records.filter(r => cleanDate(r.date) === date)} 
+            onDelete={handleDelete} loading={loading}
+            records={records} selYear={selYear} setSelYear={setSelYear} 
+            selMonth={selMonth} setSelMonth={setSelMonth}
           />
         ) : (
           <DashboardView 
@@ -325,24 +395,19 @@ function App() {
   );
 }
 
-function FormView({ date, setDate, member, setMember, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, recentRecords, onDelete, loading }) {
+function FormView({ date, setDate, member, setMember, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, selectedDateRecords, onDelete, loading, records, selYear, setSelYear, selMonth, setSelMonth }) {
   const catObj = CATEGORIES.find(c => c.id === category?.id);
   const [confirmId, setConfirmId] = useState(null);
   const [showKeypad, setShowKeypad] = useState(false);
 
   return (
     <>
-      <Card>
-        <SectionLabel>📅 日期</SectionLabel>
-        <div style={{ position: "relative" }}>
-          {/* 🌟 這個用來顯示純中文大字體 */}
-          <div style={{ width: "100%", padding: "14px", fontSize: 20, fontWeight: 900, border: "2px solid #F3F4F6", borderRadius: 12, background: "#F9FAFB", color: "#1a1a1a", textAlign: "center" }}>
-            {formatDate(date)}
-          </div>
-          {/* 🌟 這個是隱藏的透明按鈕，點了還是會跳出原生月曆 */}
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }} />
-        </div>
-      </Card>
+      {/* 🌟 替換為全新的月曆元件 */}
+      <CalendarPicker 
+        date={date} setDate={setDate} records={records} 
+        selYear={selYear} setSelYear={setSelYear} 
+        selMonth={selMonth} setSelMonth={setSelMonth} 
+      />
 
       <Card>
         <SectionLabel>👤 成員</SectionLabel>
@@ -460,37 +525,43 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
         ＋ 新增支出
       </button>
 
+      {/* 🌟 改成只顯示「所選日期」的專屬清單 */}
       {loading ? <div style={{ textAlign:"center", padding:"30px", color:"#9CA3AF", fontWeight:900, fontSize:18 }}>⏳ 同步資料中...</div> : 
-      recentRecords.length > 0 && (
         <div style={{ marginTop:30 }}>
-          <SectionLabel>🕐 當月最近記錄 (點擊垃圾桶刪除)</SectionLabel>
-          {recentRecords.map(r => (
-            <div key={r.id} style={{ background:"#fff", borderRadius:16, padding:"16px 18px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.05)" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-                <div style={{ width:48, height:48, borderRadius:14, background:(r.categoryColor||"#ccc")+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>
-                  {r.categoryEmoji}
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <span style={{ fontWeight:900, fontSize:17, color:"#1a1a1a" }}>{r.categoryLabel}</span>
-                    {r.subCategory && <span style={{ fontSize:14, color:"#9CA3AF", fontWeight:700 }}>/ {r.subCategory}</span>}
-                    <span style={{ fontSize:13, color:"#9CA3AF", marginLeft:"auto", fontWeight:700 }}>{r.member?.emoji} {r.member?.label}</span>
-                  </div>
-                  <div style={{ fontSize:14, color:"#9CA3AF", marginTop:4, fontWeight:500 }}>{formatDate(r.date)}{r.note && ` · ${r.note}`}</div>
-                </div>
-                <div style={{ fontWeight:900, fontSize:18, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
-                <button onClick={() => setConfirmId(confirmId === r.id ? null : r.id)} style={{ background:"none", border:"none", color:"#D1D5DB", cursor:"pointer", fontSize:22, padding:6, flexShrink:0 }}>🗑</button>
-              </div>
-              {confirmId === r.id && (
-                <div style={{ marginTop:14, display:"flex", gap:10, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}>
-                  <button onClick={() => setConfirmId(null)} style={{ padding:"8px 20px", borderRadius:99, border:"2px solid #E5E7EB", background:"#fff", color:"#6B7280", fontSize:15, fontWeight:700, cursor:"pointer" }}>取消</button>
-                  <button onClick={() => { onDelete(r.id, r.date); setConfirmId(null); }} style={{ padding:"8px 20px", borderRadius:99, border:"none", background:"#EF4444", color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer" }}>確認刪除</button>
-                </div>
-              )}
+          <SectionLabel>🕐 {formatDate(date)} 記錄</SectionLabel>
+          {selectedDateRecords.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"30px", color:"#9CA3AF", fontWeight:700, fontSize:16, background:"#fff", borderRadius:16, border:"2px dashed #E5E7EB" }}>
+              這天沒有花錢喔！🎉
             </div>
-          ))}
+          ) : (
+            selectedDateRecords.map(r => (
+              <div key={r.id} style={{ background:"#fff", borderRadius:16, padding:"16px 18px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.05)", borderLeft:`6px solid ${r.categoryColor}` }}>
+                <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                  <div style={{ width:48, height:48, borderRadius:14, background:(r.categoryColor||"#ccc")+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>
+                    {r.categoryEmoji}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontWeight:900, fontSize:17, color:"#1a1a1a" }}>{r.categoryLabel}</span>
+                      {r.subCategory && <span style={{ fontSize:14, color:"#9CA3AF", fontWeight:700 }}>/ {r.subCategory}</span>}
+                      <span style={{ fontSize:13, color:"#9CA3AF", marginLeft:"auto", fontWeight:700 }}>{r.member?.emoji} {r.member?.label}</span>
+                    </div>
+                    <div style={{ fontSize:14, color:"#9CA3AF", marginTop:4, fontWeight:500 }}>{r.note || "無備註"}</div>
+                  </div>
+                  <div style={{ fontWeight:900, fontSize:18, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
+                  <button onClick={() => setConfirmId(confirmId === r.id ? null : r.id)} style={{ background:"none", border:"none", color:"#D1D5DB", cursor:"pointer", fontSize:22, padding:6, flexShrink:0 }}>🗑</button>
+                </div>
+                {confirmId === r.id && (
+                  <div style={{ marginTop:14, display:"flex", gap:10, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}>
+                    <button onClick={() => setConfirmId(null)} style={{ padding:"8px 20px", borderRadius:99, border:"2px solid #E5E7EB", background:"#fff", color:"#6B7280", fontSize:15, fontWeight:700, cursor:"pointer" }}>取消</button>
+                    <button onClick={() => { onDelete(r.id, r.date); setConfirmId(null); }} style={{ padding:"8px 20px", borderRadius:99, border:"none", background:"#EF4444", color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer" }}>確認刪除</button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
-      )}
+      }
     </>
   );
 }
