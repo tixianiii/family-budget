@@ -123,11 +123,25 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // 🌟 改良版：只抓取指定月份的資料
+  // 🚀 加強版：支援 LocalStorage 快取，實現秒開
   const fetchRecords = useCallback(async (year, month) => {
-    setLoading(true);
+    const targetMonth = `${year}_${String(month).padStart(2, '0')}`;
+    const cacheKey = `cache_${targetMonth}`;
+    
+    // 1. 先檢查手機有沒有備份，有的話立刻顯示
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        setRecords(parsed);
+        setLoading(false); // 有快取就先關閉載入狀態，達成秒開體感
+      } catch(e) { console.error("快取解析失敗"); }
+    } else {
+      setLoading(true);
+    }
+
+    // 2. 背景默默去跟 Google 要最新的資料
     try {
-      const targetMonth = `${year}_${String(month).padStart(2, '0')}`;
       const res = await fetch(`${APPS_SCRIPT_URL}?month=${targetMonth}`);
       const data = await res.json();
       
@@ -137,12 +151,14 @@ function App() {
           const mem = MEMBERS.find(m => m.label === r.member) || MEMBERS[0];
           return { ...r, date: cleanDate(r.date), category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, member: mem };
         });
-        // 將日期最新的排在前面
         enriched.sort((a,b) => new Date(b.date) - new Date(a.date));
+        
+        // 3. 抓到新資料後，更新畫面並存入手機備份
         setRecords(enriched);
+        localStorage.setItem(cacheKey, JSON.stringify(enriched));
       }
     } catch (err) {
-      showToast(`連線失敗`, "error");
+      if (!cachedData) showToast(`連線失敗`, "error");
     } finally {
       setLoading(false);
     }
