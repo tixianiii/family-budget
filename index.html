@@ -277,7 +277,6 @@ function App() {
     } catch(err) { showToast(`❌ 連線錯誤`, "error"); }
   };
 
-  // 🌟 新增：更新資料的函數 (使用背景 刪除+新增 模擬修改，免改 Code.gs)
   const handleUpdate = async (record, newAmount, newNote) => {
     let calculatedAmount = 0;
     try {
@@ -289,11 +288,9 @@ function App() {
 
     showToast("⏳ 修改同步中…");
     try {
-      // 1. 先刪除舊的
       const paramsDel = new URLSearchParams({ action: "delete", id: String(record.id), date: record.date });
       await fetch(`${APPS_SCRIPT_URL}?${paramsDel.toString()}`);
       
-      // 2. 寫入新的 (沿用原本的 ID 與日期)
       const paramsAdd = new URLSearchParams({
         action: "write", id: String(record.id), date: record.date, member: record.member.label,
         categoryLabel: record.categoryLabel, subCategory: record.subCategory || "",
@@ -371,8 +368,6 @@ function App() {
 function FormView({ date, setDate, member, setMember, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, selectedDateRecords, onDelete, onUpdate, loading, records, selYear, setSelYear, selMonth, setSelMonth }) {
   const catObj = CATEGORIES.find(c => c.id === category?.id);
   const [confirmId, setConfirmId] = useState(null);
-  
-  // 🌟 編輯模式所需的 State
   const [editId, setEditId] = useState(null);
   const [editAmount, setEditAmount] = useState("");
   const [editNote, setEditNote] = useState("");
@@ -478,31 +473,33 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
           ) : (
             selectedDateRecords.map(r => (
               <div key={r.id} style={{ background:"#fff", borderRadius:16, padding:"14px 16px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.05)", borderLeft:`6px solid ${r.categoryColor}` }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <div style={{ width:40, height:40, borderRadius:12, background:(r.categoryColor||"#ccc")+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>
                     {r.categoryEmoji}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
+                    {/* 🌟 修改這裡：套用 100px 寬度限制、白名單 nowrap 防斷行 */}
                     <div style={{ display:"flex", alignItems:"center" }}>
-                       {/* 設定固定寬度 120px 裝載類別，確保後方的成員能完美對齊在同一條直線上 */}
-                       <div style={{ width: "100px", display:"flex", alignItems:"center", gap:6 }}>
-                         <span style={{ fontWeight:900, fontSize:16, color:"#1a1a1a", whiteSpace: "nowrap" }}>{r.categoryLabel}</span>
-                         {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:700, whiteSpace: "nowrap" }}>/ {r.subCategory}</span>}
-                       </div>
-                       <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:700 }}>{r.member?.emoji} {r.member?.label}</span>
-                     </div>
+                      <div style={{ width: "100px", display:"flex", alignItems:"center", gap:4 }}>
+                        <span style={{ fontWeight:900, fontSize:16, color:"#1a1a1a", whiteSpace: "nowrap" }}>{r.categoryLabel}</span>
+                        {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:700, whiteSpace: "nowrap" }}>/ {r.subCategory}</span>}
+                      </div>
+                      <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:700, whiteSpace: "nowrap" }}>{r.member?.emoji} {r.member?.label}</span>
+                    </div>
                     <div style={{ fontSize:13, color:"#9CA3AF", marginTop:4, fontWeight:500 }}>{r.note || "無備註"}</div>
                   </div>
-                  <div style={{ fontWeight:900, fontSize:17, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
                   
-                  {/* 🌟 編輯與刪除按鈕區塊 */}
-                  <div style={{ display: "flex", gap: 2, marginLeft: 6 }}>
-                    <button onClick={() => { setEditId(r.id); setEditAmount(r.amount); setEditNote(r.note || ""); setConfirmId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:17, padding:4 }}>✏️</button>
-                    <button onClick={() => { setConfirmId(confirmId === r.id ? null : r.id); setEditId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:17, padding:4 }}>🗑</button>
+                  {/* 🌟 金額字體從 17 縮小到 15 */}
+                  <div style={{ fontWeight:900, fontSize:15, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
+                  
+                  {/* 🌟 按鈕區塊：間距縮小為 0、按鈕內距縮小為 2、字體縮為 14、靠攏 */}
+                  <div style={{ display: "flex", gap: 0, marginLeft: 4, flexShrink:0 }}>
+                    <button onClick={() => { setEditId(r.id); setEditAmount(r.amount); setEditNote(r.note || ""); setConfirmId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, padding:2 }}>✏️</button>
+                    <button onClick={() => { setConfirmId(confirmId === r.id ? null : r.id); setEditId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, padding:2 }}>🗑</button>
                   </div>
                 </div>
 
-                {/* 🌟 刪除確認展開區 */}
+                {/* 刪除確認展開區 */}
                 {confirmId === r.id && (
                   <div style={{ marginTop:14, paddingTop: 12, borderTop: "1px dashed #E5E7EB", display:"flex", gap:10, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}>
                     <button onClick={() => setConfirmId(null)} style={{ padding:"6px 16px", borderRadius:99, border:"1px solid #E5E7EB", background:"#F3F4F6", color:"#4B5563", fontSize:13, fontWeight:700, cursor:"pointer" }}>取消</button>
@@ -510,7 +507,7 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
                   </div>
                 )}
 
-                {/* 🌟 內聯編輯展開區 (版面極簡) */}
+                {/* 內聯編輯展開區 */}
                 {editId === r.id && (
                   <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed #E5E7EB", animation: "slideUp 0.2s ease" }}>
                     <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
