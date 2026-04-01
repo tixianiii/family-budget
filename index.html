@@ -154,6 +154,39 @@ function App() {
       setSelMonth(Number(m));
     }
   }, [date]);
+ // 🌟 新增：手勢偵測 (下拉重刷整個網頁)
+  useEffect(() => {
+    let startY = 0;
+    
+    const handleTouchStart = (e) => {
+      // 只有畫面在最頂端時，才開始紀錄手指位置
+      if (window.scrollY === 0) startY = e.touches[0].clientY;
+    };
+    
+    const handleTouchMove = (e) => {
+      if (window.scrollY === 0 && startY > 0) {
+        const pullDistance = e.touches[0].clientY - startY;
+        // 只要往下拉超過 120px，就觸發重整
+        if (pullDistance > 120) {
+          startY = 0; // 歸零，避免連續觸發好幾次
+          showToast("🔄 網頁重新載入中...");
+          setTimeout(() => window.location.reload(), 300);
+        }
+      }
+    };
+    
+    const handleTouchEnd = () => { startY = 0; };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [showToast]);
 
   const handleCategorySelect = (cat) => { setCategory(cat); setSubCategory(null); };
 
