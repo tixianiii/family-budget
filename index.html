@@ -623,7 +623,7 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
                 const total = records.filter(r => r.member?.id === m.id).reduce((s,r) => s+r.amount, 0);
                 return (
                   <div key={m.id} style={{ background: total > 0 ? m.color+"12" : "#F9FAFB", border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`, borderRadius:16, padding:"18px 14px", textAlign:"center" }}>
-                    <{/* 🌟 判斷：如果有圖片就顯示圖片，沒有就顯示原本的 Emoji */}
+                    {/* 🌟 判斷：如果有圖片就顯示圖片，沒有就顯示原本的 Emoji */}
                      {m.image ? (
                        <img src={m.image} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", margin: "0 auto", marginBottom: 6, display: "block" }} alt={m.label} />
                      ) : (
