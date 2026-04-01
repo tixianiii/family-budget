@@ -30,7 +30,13 @@
 </head>
 <body>
 
-<div id="root"></div>
+<div id="root">
+  <div style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #1a1a1a; font-family: 'Noto Sans TC', sans-serif;">
+    <div style="font-size: 72px; margin-bottom: 20px; animation: slideUp 0.5s ease;">📒</div>
+    <div style="color: #F59E0B; font-size: 28px; font-weight: 900; letter-spacing: 4px; animation: fadeIn 0.8s ease;">家庭記帳本</div>
+    <div style="color: #9CA3AF; font-size: 16px; font-weight: 700; margin-top: 16px; animation: fadeIn 1.2s ease;">正在準備畫面，請稍候...</div>
+  </div>
+</div>
 
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
