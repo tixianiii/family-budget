@@ -40,7 +40,8 @@
 </div>
 
 <script type="text/babel">
-const { useState, useEffect, useCallback } = React;
+// 🌟 這裡新增了 useRef 來捕捉鍵盤元素
+const { useState, useEffect, useCallback, useRef } = React;
 const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
 
 // 🔗 你的 Google API
@@ -97,7 +98,7 @@ function SectionLabel({ children }) {
   return <div style={{ fontSize:14, fontWeight:900, color:"#9CA3AF", letterSpacing:1.5, marginBottom:12 }}>{children}</div>;
 }
 
-// 🌟 全新的月曆選擇器元件 (加入農曆功能)
+// 月曆選擇器元件
 function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear, setSelMonth }) {
   const daysInMonth = new Date(selYear, selMonth, 0).getDate();
   const firstDay = new Date(selYear, selMonth - 1, 1).getDay(); // 0-6
@@ -148,11 +149,9 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
           const isToday = todayStr === currentCellDateStr;
           const total = dailyTotals[currentCellDateStr] || 0;
 
-          // 🌟 嚴格計算兩個字的農曆日期
           let lunarText = "";
           if (typeof Solar !== 'undefined') {
             try {
-              // getDayInChinese() 會直接回傳完美的兩個字，例如：「初一」、「十五」、「廿三」
               lunarText = Solar.fromYmd(selYear, selMonth, day).getLunar().getDayInChinese();
             } catch (e) {}
           }
@@ -161,7 +160,7 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
             <div key={day}
               onClick={() => setDate(currentCellDateStr)}
               style={{
-                height: 72, // 稍微調高一點點，讓三行字有呼吸空間
+                height: 72, 
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 borderRadius: 14, cursor: "pointer",
                 background: isSelected ? "#F59E0B" : total > 0 ? "#FEE2E2" : "transparent",
@@ -170,17 +169,12 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
                 transition: "all 0.15s"
               }}
             >
-              {/* 國曆日期 */}
               <div style={{ fontSize: 18, fontWeight: 900, lineHeight: 1.1 }}>{isToday ? "今" : day}</div>
-              
-              {/* 🌟 農曆小字 (強制兩個字) */}
               {lunarText && (
                 <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? "rgba(255,255,255,0.9)" : "#9CA3AF", marginTop: 3 }}>
                   {lunarText}
                 </div>
               )}
-
-              {/* 支出金額 */}
               {total > 0 && (
                 <div style={{ fontSize: 11, fontWeight: 900, color: isSelected ? "#FFFBEB" : "#EF4444", marginTop: 3 }}>
                   -{total}
@@ -259,7 +253,7 @@ function App() {
     }
   }, [date]);
 
-  // 🌟 手勢偵測 (下拉重刷整個網頁，完美支援 iPhone)
+  // 手勢偵測 (下拉重刷)
   useEffect(() => {
     let startY = 0;
     let currentY = 0;
@@ -420,6 +414,18 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
   const catObj = CATEGORIES.find(c => c.id === category?.id);
   const [confirmId, setConfirmId] = useState(null);
   const [showKeypad, setShowKeypad] = useState(false);
+  
+  // 🌟 建立一個綁定計算機區域的變數
+  const keypadRef = useRef(null);
+
+  // 🌟 自動滑動功能：當 showKeypad 變成 true (開啟) 時，自動將畫面滑到這個區域的最底端
+  useEffect(() => {
+    if (showKeypad && keypadRef.current) {
+      setTimeout(() => {
+        keypadRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 150); // 給一點點時間讓動畫先跑出來再滑動
+    }
+  }, [showKeypad]);
 
   return (
     <>
@@ -480,8 +486,9 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
             style={{ width:"100%", fontSize:42, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12, padding:"16px 16px 16px 48px", color: showKeypad ? "#F59E0B" : "#1a1a1a", background: showKeypad ? "#FFFBEB" : "#F9FAFB", outline:"none", cursor:"pointer", transition:"all 0.2s" }} />
         </div>
 
+        {/* 🌟 加上 ref 追蹤這個區域 */}
         {showKeypad && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginTop: 18, animation: "slideUp 0.2s ease" }}>
+          <div ref={keypadRef} style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginTop: 18, animation: "slideUp 0.2s ease" }}>
             {[
               { l: '7', v: '7' }, { l: '8', v: '8' }, { l: '9', v: '9' }, { l: '⌫', v: 'BACK', bg: '#FEE2E2', c: '#EF4444' },
               { l: '4', v: '4' }, { l: '5', v: '5' }, { l: '6', v: '6' }, { l: '＋', v: '+', bg: '#FEF3C7', c: '#F59E0B' },
