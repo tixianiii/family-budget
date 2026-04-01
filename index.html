@@ -50,7 +50,8 @@ const MEMBERS = [
   { id: "dad", label: "騏騏", emoji: "👨", color: "#3B82F6" },
   { id: "mom", label: "潔潔", emoji: "👩", color: "#EC4899" },
   { id: "sister", label: "嫻嫻", emoji: "👧", color: "#8B5CF6" },
-  { id: "brother", label: "澤澤", emoji: "🧒", color: "#10B981" },
+  // 🌟 只有這裡改變：後面加上 image: "zeze.png"
+  { id: "brother", label: "澤澤", emoji: "🧒", color: "#10B981", image: "zeze.png" }, 
   { id: "whole_family", label: "全家", emoji: "👨‍👩‍👧‍👦", color: "#F59E0B" },
 ];
 
@@ -622,7 +623,12 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
                 const total = records.filter(r => r.member?.id === m.id).reduce((s,r) => s+r.amount, 0);
                 return (
                   <div key={m.id} style={{ background: total > 0 ? m.color+"12" : "#F9FAFB", border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`, borderRadius:16, padding:"18px 14px", textAlign:"center" }}>
-                    <div style={{ fontSize:32 }}>{m.emoji}</div>
+                    <{/* 🌟 判斷：如果有圖片就顯示圖片，沒有就顯示原本的 Emoji */}
+                     {m.image ? (
+                       <img src={m.image} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", margin: "0 auto", marginBottom: 6, display: "block" }} alt={m.label} />
+                     ) : (
+                       <div style={{ fontSize:32 }}>{m.emoji}</div>
+                     )}
                     <div style={{ fontWeight:900, fontSize:15, color:"#374151", marginTop:6 }}>{m.label}</div>
                     <div style={{ fontWeight:900, fontSize:20, color: total > 0 ? m.color : "#D1D5DB", marginTop:6 }}>{formatMoney(total)}</div>
                   </div>
