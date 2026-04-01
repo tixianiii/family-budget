@@ -16,6 +16,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js" crossorigin></script>
 <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js" crossorigin></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.4/lunar.min.js"></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -96,7 +97,7 @@ function SectionLabel({ children }) {
   return <div style={{ fontSize:14, fontWeight:900, color:"#9CA3AF", letterSpacing:1.5, marginBottom:12 }}>{children}</div>;
 }
 
-// 🌟 全新的月曆選擇器元件
+// 🌟 全新的月曆選擇器元件 (加入農曆功能)
 function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear, setSelMonth }) {
   const daysInMonth = new Date(selYear, selMonth, 0).getDate();
   const firstDay = new Date(selYear, selMonth - 1, 1).getDay(); // 0-6
@@ -111,7 +112,7 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
     let newY = selYear, newM = selMonth - 1;
     if (newM === 0) { newY -= 1; newM = 12; }
     setSelYear(newY); setSelMonth(newM);
-    setDate(`${newY}-${String(newM).padStart(2,'0')}-01`); // 切換月份時預設選取1號
+    setDate(`${newY}-${String(newM).padStart(2,'0')}-01`);
   };
 
   const handleNextMonth = () => {
@@ -147,11 +148,21 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
           const isToday = todayStr === currentCellDateStr;
           const total = dailyTotals[currentCellDateStr] || 0;
 
+          // 🌟 嚴格計算兩個字的農曆日期
+          let lunarText = "";
+          if (typeof Solar !== 'undefined') {
+            try {
+              // getDayInChinese() 會直接回傳完美的兩個字，例如：「初一」、「十五」、「廿三」
+              lunarText = Solar.fromYmd(selYear, selMonth, day).getLunar().getDayInChinese();
+            } catch (e) {}
+          }
+
           return (
             <div key={day}
               onClick={() => setDate(currentCellDateStr)}
               style={{
-                height: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                height: 72, // 稍微調高一點點，讓三行字有呼吸空間
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 borderRadius: 14, cursor: "pointer",
                 background: isSelected ? "#F59E0B" : total > 0 ? "#FEE2E2" : "transparent",
                 color: isSelected ? "#fff" : "#1a1a1a",
@@ -159,9 +170,19 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
                 transition: "all 0.15s"
               }}
             >
-              <div style={{ fontSize: 18, fontWeight: 900 }}>{isToday ? "今" : day}</div>
+              {/* 國曆日期 */}
+              <div style={{ fontSize: 18, fontWeight: 900, lineHeight: 1.1 }}>{isToday ? "今" : day}</div>
+              
+              {/* 🌟 農曆小字 (強制兩個字) */}
+              {lunarText && (
+                <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? "rgba(255,255,255,0.9)" : "#9CA3AF", marginTop: 3 }}>
+                  {lunarText}
+                </div>
+              )}
+
+              {/* 支出金額 */}
               {total > 0 && (
-                <div style={{ fontSize: 11, fontWeight: 900, color: isSelected ? "#FFFBEB" : "#EF4444", marginTop: 2 }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: isSelected ? "#FFFBEB" : "#EF4444", marginTop: 3 }}>
                   -{total}
                 </div>
               )}
@@ -238,7 +259,7 @@ function App() {
     }
   }, [date]);
 
-  // 🌟 改良版手勢偵測 (下拉重刷整個網頁，完美支援 iPhone)
+  // 🌟 手勢偵測 (下拉重刷整個網頁，完美支援 iPhone)
   useEffect(() => {
     let startY = 0;
     let currentY = 0;
@@ -402,7 +423,6 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
 
   return (
     <>
-      {/* 🌟 替換為全新的月曆元件 */}
       <CalendarPicker 
         date={date} setDate={setDate} records={records} 
         selYear={selYear} setSelYear={setSelYear} 
@@ -525,7 +545,6 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
         ＋ 新增支出
       </button>
 
-      {/* 🌟 改成只顯示「所選日期」的專屬清單 */}
       {loading ? <div style={{ textAlign:"center", padding:"30px", color:"#9CA3AF", fontWeight:900, fontSize:18 }}>⏳ 同步資料中...</div> : 
         <div style={{ marginTop:30 }}>
           <SectionLabel>🕐 {formatDate(date)} 記錄</SectionLabel>
