@@ -483,11 +483,14 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
                     {r.categoryEmoji}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                      <span style={{ fontWeight:900, fontSize:16, color:"#1a1a1a" }}>{r.categoryLabel}</span>
-                      {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:700 }}>/ {r.subCategory}</span>}
-                      <span style={{ fontSize:12, color:"#9CA3AF", marginLeft:"auto", fontWeight:700 }}>{r.member?.emoji} {r.member?.label}</span>
-                    </div>
+                    <div style={{ display:"flex", alignItems:"center" }}>
+                       {/* 設定固定寬度 120px 裝載類別，確保後方的成員能完美對齊在同一條直線上 */}
+                       <div style={{ width: "120px", display:"flex", alignItems:"center", gap:6 }}>
+                         <span style={{ fontWeight:900, fontSize:16, color:"#1a1a1a", whiteSpace: "nowrap" }}>{r.categoryLabel}</span>
+                         {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:700, whiteSpace: "nowrap" }}>/ {r.subCategory}</span>}
+                       </div>
+                       <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:700 }}>{r.member?.emoji} {r.member?.label}</span>
+                     </div>
                     <div style={{ fontSize:13, color:"#9CA3AF", marginTop:4, fontWeight:500 }}>{r.note || "無備註"}</div>
                   </div>
                   <div style={{ fontWeight:900, fontSize:17, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
