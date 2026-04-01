@@ -342,9 +342,54 @@ function FormView({ date, setDate, member, setMember, category, onCategorySelect
           <input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" 
             style={{ width:"100%", fontSize:36, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12, padding:"14px 14px 14px 44px", color:"#1a1a1a", background:"#F9FAFB", outline:"none" }} />
         </div>
+        
+        {/* 備註輸入框 */}
         <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2} style={{ width:"100%", marginTop:12, fontSize:14, border:"2px solid #F3F4F6", borderRadius:12, padding:"10px 14px", color:"#374151", background:"#F9FAFB", outline:"none", resize:"none", lineHeight:1.6 }} />
-      </Card>
+        
+        {/* 🌟 備註智慧提示 (Auto-complete) */}
+        {(() => {
+          if (!note.trim()) return null; // 如果沒打字，就不顯示
+          const counts = {};
+          
+          // 掃描手機裡的快取記憶，統計大家最常用什麼備註
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('cache_')) {
+              try {
+                const monthData = JSON.parse(localStorage.getItem(key));
+                monthData.forEach(r => {
+                  if (r.note && r.note.trim()) {
+                    const n = r.note.trim();
+                    counts[n] = (counts[n] || 0) + 1;
+                  }
+                });
+              } catch(e) {}
+            }
+          }
+          
+          // 篩選出包含「目前輸入文字」的備註，並依據使用次數由高到低排序，只取前 3 名
+          const suggestions = Object.keys(counts)
+            .filter(n => n.toLowerCase().includes(note.toLowerCase()) && n !== note)
+            .sort((a,b) => counts[b] - counts[a])
+            .slice(0, 3);
 
+          if (suggestions.length === 0) return null;
+
+          return (
+            <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap", animation:"slideUp 0.2s ease" }}>
+              <span style={{ fontSize:12, color:"#9CA3AF", display:"flex", alignItems:"center" }}>💡 猜你想輸入：</span>
+              {suggestions.map(s => (
+                <button key={s} onClick={() => setNote(s)} style={{
+                  padding:"4px 12px", background:"#F3F4F6", color:"#374151", border:"1px solid #E5E7EB", 
+                  borderRadius:99, fontSize:13, fontWeight:700, cursor:"pointer", transition:"all 0.1s"
+                }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+      </Card>
       <button onClick={onSubmit} style={{ width:"100%", padding:"18px 0", background:"#1a1a1a", color:"#F59E0B", border:"none", borderRadius:16, fontSize:17, fontWeight:900, cursor:"pointer", letterSpacing:2, boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>
         ＋ 新增支出
       </button>
