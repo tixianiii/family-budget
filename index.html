@@ -128,7 +128,6 @@ function App() {
   const [selYear, setSelYear] = useState(new Date().getFullYear());
   const [selMonth, setSelMonth] = useState(new Date().getMonth() + 1);
   const [date, setDate] = useState(today());
-  // 🌟 成員狀態改成陣列，支援複選
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [category, setCategory] = useState(null);
   const [subCategory, setSubCategory] = useState(null);
@@ -149,7 +148,6 @@ function App() {
       if (data.status === "ok") {
         const enriched = data.records.map(r => {
           const cat = getCatById(r.categoryLabel);
-          // 將從資料庫讀取的成員字串（例如 "嫻嫻,澤澤"）轉換回成員物件陣列
           const memberNames = String(r.member).split(",");
           const memObjs = memberNames.map(name => MEMBERS.find(m => m.label === name) || MEMBERS[0]);
           return { ...r, date: cleanDate(r.date), category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, memberObjs: memObjs };
@@ -164,7 +162,6 @@ function App() {
   useEffect(() => { fetchRecords(selYear, selMonth); }, [selYear, selMonth, fetchRecords]);
   useEffect(() => { if (date) { const [y, m] = date.split("-"); setSelYear(Number(y)); setSelMonth(Number(m)); } }, [date]);
 
-  // 下拉重整
   useEffect(() => {
     let startY = 0; let currentY = 0; let isAtTop = false;
     const handleTouchStart = (e) => { if (window.scrollY <= 0) { startY = e.touches[0].clientY; currentY = startY; isAtTop = true; } else { isAtTop = false; } };
@@ -176,53 +173,68 @@ function App() {
     return () => { window.removeEventListener('touchstart', handleTouchStart); window.removeEventListener('touchmove', handleTouchMove); window.removeEventListener('touchend', handleTouchEnd); };
   }, [showToast]);
 
-  // 🌟 成員選取邏輯
   const toggleMember = (m) => {
     setSelectedMembers(prev => {
-      // 如果點選的是「全家」，就只留全家
       if (m.id === "whole_family") return [m];
-      // 如果原本選的是「全家」，現在選別人，就先清空全家再加新的
       const filtered = prev.filter(p => p.id !== "whole_family");
-      if (prev.some(p => p.id === m.id)) {
-        return filtered.filter(p => p.id !== m.id);
-      } else {
-        return [...filtered, m];
-      }
+      if (prev.some(p => p.id === m.id)) { return filtered.filter(p => p.id !== m.id); } 
+      else { return [...filtered, m]; }
     });
   };
 
+  // 🚀 極速秒傳 (Optimistic UI)
   const handleSubmit = async () => {
     if (selectedMembers.length === 0 || !category || !amount) return showToast("資料不完整哦", "error");
-    let calcAmt = 0; try { calcAmt = Function(`"use strict"; return (${String(amount).replace(/[^-()\d/*+.]/g, '')})`)(); } catch(e) { return showToast("算式錯誤", "error"); }
+    let calcAmt = 0; 
+    try { calcAmt = Function(`"use strict"; return (${String(amount).replace(/[^-()\d/*+.]/g, '')})`)(); } 
+    catch(e) { return showToast("算式錯誤", "error"); }
     if (!calcAmt || isNaN(calcAmt) || calcAmt <= 0) return showToast("無效金額", "error");
     
-    showToast("⏳ 儲存中…");
     const memberLabels = selectedMembers.map(m => m.label).join(",");
-    try {
-      const p = new URLSearchParams({ action: "write", id: String(Date.now()), date: date, member: memberLabels, categoryLabel: category.label, subCategory: subCategory || "", amount: String(calcAmt), note: note || "" });
-      const res = await fetch(`${APPS_SCRIPT_URL}?${p.toString()}`);
-      if ((await res.json()).status === "ok") { showToast("✅ 記帳成功！"); setSelectedMembers([]); setCategory(null); setSubCategory(null); setAmount(""); setNote(""); fetchRecords(selYear, selMonth); }
-    } catch (err) { showToast(`❌ 連線錯誤`, "error"); }
+    const fakeId = String(Date.now());
+    
+    // 1. 瞬間更新畫面
+    const newRecord = {
+      id: fakeId, date: date, amount: calcAmt, note: note || "", member: memberLabels,
+      category: category.id, categoryLabel: category.label, categoryEmoji: category.emoji, categoryColor: category.color,
+      subCategory: subCategory || "", memberObjs: [...selectedMembers]
+    };
+    
+    setRecords(prev => [newRecord, ...prev].sort((a,b) => new Date(b.date) - new Date(a.date)));
+    showToast("✅ 記帳成功！"); 
+    setSelectedMembers([]); setCategory(null); setSubCategory(null); setAmount(""); setNote("");
+    
+    // 2. 背景默默送出資料
+    const p = new URLSearchParams({ action: "write", id: fakeId, date: date, member: memberLabels, categoryLabel: category.label, subCategory: subCategory || "", amount: String(calcAmt), note: note || "" });
+    fetch(`${APPS_SCRIPT_URL}?${p.toString()}`).then(res => res.json()).then(data => {
+      if(data.status !== "ok") { showToast("❌ 背景同步異常", "error"); }
+    }).catch(err => { showToast("❌ 網路異常，背景同步失敗", "error"); });
   };
 
+  // 🚀 極速刪除
   const handleDelete = async (id, rDate) => {
-    showToast("⏳ 刪除中…");
-    try {
-      const p = new URLSearchParams({ action: "delete", id: String(id), date: rDate });
-      const res = await fetch(`${APPS_SCRIPT_URL}?${p.toString()}`);
-      if ((await res.json()).status === "ok") { showToast("🗑 已刪除"); fetchRecords(selYear, selMonth); }
-    } catch(err) { showToast(`❌ 連線錯誤`, "error"); }
+    setRecords(prev => prev.filter(r => r.id !== id));
+    showToast("🗑 已刪除");
+    
+    const p = new URLSearchParams({ action: "delete", id: String(id), date: rDate });
+    fetch(`${APPS_SCRIPT_URL}?${p.toString()}`).catch(() => showToast("❌ 背景刪除失敗", "error"));
   };
 
+  // 🚀 極速修改
   const handleUpdate = async (record, nAmt, nNote) => {
-    let calcAmt = 0; try { calcAmt = Function(`"use strict"; return (${String(nAmt).replace(/[^-()\d/*+.]/g, '')})`)(); } catch(e) { return showToast("算式錯誤", "error"); }
+    let calcAmt = 0; 
+    try { calcAmt = Function(`"use strict"; return (${String(nAmt).replace(/[^-()\d/*+.]/g, '')})`)(); } 
+    catch(e) { return showToast("算式錯誤", "error"); }
     if (!calcAmt || isNaN(calcAmt) || calcAmt <= 0) return showToast("無效金額", "error");
-    showToast("⏳ 修改中…");
+    
+    setRecords(prev => prev.map(r => r.id === record.id ? { ...r, amount: calcAmt, note: nNote || "" } : r));
+    showToast("✅ 修改成功！");
+    
     try {
-      await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: "delete", id: String(record.id), date: record.date }).toString()}`);
-      const res = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: "write", id: String(record.id), date: record.date, member: record.member, categoryLabel: record.categoryLabel, subCategory: record.subCategory || "", amount: String(calcAmt), note: nNote || "" }).toString()}`);
-      if ((await res.json()).status === "ok") { showToast("✅ 修改成功！"); fetchRecords(selYear, selMonth); }
-    } catch(err) { showToast(`❌ 連線錯誤`, "error"); }
+      fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: "delete", id: String(record.id), date: record.date }).toString()}`).then(() => {
+        fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: "write", id: String(record.id), date: record.date, member: String(record.member), categoryLabel: record.categoryLabel, subCategory: record.subCategory || "", amount: String(calcAmt), note: nNote || "" }).toString()}`);
+      });
+    } catch(err) { showToast("❌ 背景修改失敗", "error"); }
   };
 
   const selectedDateTotal = records.filter(r => cleanDate(r.date) === date).reduce((s, r) => s + r.amount, 0);
@@ -314,7 +326,6 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
                       <span style={{ fontWeight:900, fontSize:16, color:"#1a1a1a", whiteSpace: "nowrap" }}>{r.categoryLabel}</span>
                       {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:700, whiteSpace: "nowrap" }}>/ {r.subCategory}</span>}
                     </div>
-                    {/* 🌟 修正後的成員顯示邏輯：Emoji 疊加展示，名字用中文頓號隔開 */}
                     <div style={{ display:"flex", alignItems:"center", gap:2, whiteSpace: "nowrap", overflow: "hidden" }}>
                       <span style={{ fontSize:12, color:"#1a1a1a", letterSpacing: -2 }}>{(r.memberObjs || []).map(m => m.emoji).join("")}</span>
                       <span style={{ fontSize:11, color:"#9CA3AF", fontWeight:700, marginLeft: 4 }}>{String(r.member).replace(/,/g, "、")}</span>
@@ -357,12 +368,12 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
             <SectionLabel>👥 成員支出</SectionLabel>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12 }}>
               {MEMBERS.map(m => {
-                // 🌟 修改統計邏輯：如果該筆紀錄包含此成員的名字，就計入他的支出
-                // 🌟 AA 制均攤邏輯：找出這筆帳選了幾個人，把金額平分 (遇到除不盡會自動四捨五入)
                 const total = records.reduce((sum, r) => {
-                  const memList = String(r.member).split(","); // 將「嫻嫻,澤澤」切成陣列
+                  const memStr = String(r.member || "");
+                  if (!memStr) return sum;
+                  const memList = memStr.split(",");
                   if (memList.includes(m.label)) {
-                    return sum + Math.round(r.amount / memList.length); // 金額除以人數後加總
+                    return sum + Math.round(r.amount / memList.length);
                   }
                   return sum;
                 }, 0);
@@ -373,7 +384,7 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
                     ) : (
                       <div style={{ fontSize:32 }}>{m.emoji}</div>
                     )}
-                    <div style={{ fontWeight:900, fontSize:15, color:"#374151" }}>{m.label}</div>
+                    <div style={{ fontWeight:900, fontSize:15, color:"#374151", marginTop:6 }}>{m.label}</div>
                     <div style={{ fontWeight:900, fontSize:20, color: total > 0 ? m.color : "#D1D5DB", marginTop:6 }}>{formatMoney(total)}</div>
                   </div>
                 );
