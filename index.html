@@ -358,7 +358,14 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
             <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12 }}>
               {MEMBERS.map(m => {
                 // 🌟 修改統計邏輯：如果該筆紀錄包含此成員的名字，就計入他的支出
-                const total = records.filter(r => String(r.member).includes(m.label)).reduce((s,r) => s+r.amount, 0);
+                // 🌟 AA 制均攤邏輯：找出這筆帳選了幾個人，把金額平分 (遇到除不盡會自動四捨五入)
+                const total = records.reduce((sum, r) => {
+                  const memList = String(r.member).split(","); // 將「嫻嫻,澤澤」切成陣列
+                  if (memList.includes(m.label)) {
+                    return sum + Math.round(r.amount / memList.length); // 金額除以人數後加總
+                  }
+                  return sum;
+                }, 0);
                 return (
                   <div key={m.id} style={{ background: total > 0 ? m.color+"12" : "#F9FAFB", border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`, borderRadius:16, padding:"18px 14px", textAlign:"center" }}>
                     {m.image ? (
