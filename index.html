@@ -205,7 +205,7 @@ function App() {
     setSelectedMembers([]); setCategory(null); setSubCategory(null); setAmount(""); setNote("");
     
     // 2. 背景默默送出資料
-    const p = new URLSearchParams({ action: "write", id: fakeId, date: date, member: memberLabels, categoryLabel: category.label, subCategory: subCategory || "", amount: String(calcAmt), note: note || "" });
+    const p = new URLSearchParams({ action: "write", id: fakeId, date: date, member: memberLabels, categoryLabel: category.label, subCategory: subCategory || "", amount: String(calcAmt), note: note ? "'" + note : "" });
     fetch(`${APPS_SCRIPT_URL}?${p.toString()}`).then(res => res.json()).then(data => {
       if(data.status !== "ok") { showToast("❌ 背景同步異常", "error"); }
     }).catch(err => { showToast("❌ 網路異常，背景同步失敗", "error"); });
@@ -232,7 +232,7 @@ function App() {
     
     try {
       fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: "delete", id: String(record.id), date: record.date }).toString()}`).then(() => {
-        fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: "write", id: String(record.id), date: record.date, member: String(record.member), categoryLabel: record.categoryLabel, subCategory: record.subCategory || "", amount: String(calcAmt), note: nNote || "" }).toString()}`);
+        fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: "write", id: String(record.id), date: record.date, member: String(record.member), categoryLabel: record.categoryLabel, subCategory: record.subCategory || "", amount: String(calcAmt), note: nNote ? "'" + nNote : "" }).toString()}`);
       });
     } catch(err) { showToast("❌ 背景修改失敗", "error"); }
   };
