@@ -148,7 +148,8 @@ function App() {
       if (data.status === "ok") {
         const enriched = data.records.map(r => {
           const cat = getCatById(r.categoryLabel);
-          const memberNames = String(r.member).split("、");
+          // 🌟 防呆：同時支援頓號與逗號，並自動清除名字旁邊不小心按到的空白鍵
+          const memberNames = String(r.member || "").split(/[、,]/).map(name => name.trim());
           const memObjs = memberNames.map(name => MEMBERS.find(m => m.label === name) || MEMBERS[0]);
           return { ...r, date: cleanDate(r.date), category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, memberObjs: memObjs };
         });
@@ -368,10 +369,12 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
             <SectionLabel>👥 成員支出</SectionLabel>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12 }}>
               {MEMBERS.map(m => {
+                // 🌟 增強版 AA 制均攤邏輯
                 const total = records.reduce((sum, r) => {
                   const memStr = String(r.member || "");
                   if (!memStr) return sum;
-                  const memList = memStr.split("、");
+                  // 支援頓號與逗號，且過濾掉空白，讓舊資料也能完美對齊！
+                  const memList = memStr.split(/[、,]/).map(name => name.trim());
                   if (memList.includes(m.label)) {
                     return sum + Math.round(r.amount / memList.length);
                   }
