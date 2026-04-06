@@ -54,7 +54,7 @@ const MEMBERS = [
 const CATEGORIES = [
   { id: "food", label: "飲食", emoji: "🍱", color: "#F59E0B", subs: ["早餐","午餐","晚餐","飲料","點心","宵夜","酒","水果","保健品","其他"] },
   { id: "transport", label: "交通", emoji: "🚗", color: "#3B82F6", subs: ["公車","捷運","計程車","停車費","加油","高鐵","汽車","火車","摩托車"] },
-  { id: "entertainment", label: "娛樂", emoji: "🎮", color: "#8B5CF6", subs: ["電影","遊戲","KTV","展覽","運動","訂閱","休閒","旅行","住宿","派對"] },
+  { id: "entertainment", label: "娛樂", emoji: "🎮", color: "#8B5CF6", subs: ["電影","遊戲","KTV","展覽","運動","訂閱","休閒","旅行","住宿","派對","演唱會"] },
   { id: "company", label: "公司", emoji: "💼", color: "#6B7280", subs: [] },
   { id: "shopping", label: "購物", emoji: "🛍️", color: "#EC4899", subs: ["衣服","鞋子","包包","3C","書籍","生活用品","美妝保養","精品","禮物","網購","美容美髮"] },
   { id: "personal", label: "個人", emoji: "💆", color: "#06B6D4", subs: ["社交","通話費","投資","稅金","保險","捐款","彩券","卡費"] },
@@ -148,7 +148,7 @@ function App() {
       if (data.status === "ok") {
         const enriched = data.records.map(r => {
           const cat = getCatById(r.categoryLabel);
-          const memberNames = String(r.member).split(",");
+          const memberNames = String(r.member).split("、");
           const memObjs = memberNames.map(name => MEMBERS.find(m => m.label === name) || MEMBERS[0]);
           return { ...r, date: cleanDate(r.date), category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, memberObjs: memObjs };
         });
@@ -190,7 +190,7 @@ function App() {
     catch(e) { return showToast("算式錯誤", "error"); }
     if (!calcAmt || isNaN(calcAmt) || calcAmt <= 0) return showToast("無效金額", "error");
     
-    const memberLabels = selectedMembers.map(m => m.label).join(",");
+    const memberLabels = selectedMembers.map(m => m.label).join("、");
     const fakeId = String(Date.now());
     
     // 1. 瞬間更新畫面
@@ -328,7 +328,7 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:2, whiteSpace: "nowrap", overflow: "hidden" }}>
                       <span style={{ fontSize:12, color:"#1a1a1a", letterSpacing: -2 }}>{(r.memberObjs || []).map(m => m.emoji).join("")}</span>
-                      <span style={{ fontSize:11, color:"#9CA3AF", fontWeight:700, marginLeft: 4 }}>{String(r.member).replace(/,/g, "、")}</span>
+                      <span style={{ fontSize:11, color:"#9CA3AF", fontWeight:700, marginLeft: 4 }}>{String(r.member)}</span>
                     </div>
                   </div>
                   <div style={{ fontSize:13, color:"#9CA3AF", marginTop:4, fontWeight:500 }}>{r.note || "無備註"}</div>
@@ -371,7 +371,7 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
                 const total = records.reduce((sum, r) => {
                   const memStr = String(r.member || "");
                   if (!memStr) return sum;
-                  const memList = memStr.split(",");
+                  const memList = memStr.split("、");
                   if (memList.includes(m.label)) {
                     return sum + Math.round(r.amount / memList.length);
                   }
