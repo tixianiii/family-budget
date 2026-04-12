@@ -297,7 +297,34 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
       </Card>
       <Card>
         <SectionLabel>💰 金額 (點擊開啟計算機)</SectionLabel>
-        <div style={{ position:"relative" }}><span style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", fontSize:28, color:"#9CA3AF", fontWeight:900 }}>$</span><input type="text" inputMode="none" readOnly value={amount} onClick={() => setShowKeypad(true)} placeholder="0" style={{ width:"100%", fontSize:42, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12, padding:"16px 16px 16px 48px", color: showKeypad ? "#F59E0B" : "#1a1a1a", background: showKeypad ? "#FFFBEB" : "#F9FAFB", outline:"none", cursor:"pointer", transition:"all 0.2s" }} /></div>
+        <div style={{ position:"relative" }}>
+          <span style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", fontSize:28, color:"#9CA3AF", fontWeight:900 }}>$</span>
+          <input 
+            type="text" 
+            inputMode="none" 
+            readOnly 
+            value={amount} 
+            onClick={() => setShowKeypad(true)} 
+            placeholder="0" 
+            style={{ 
+              width:"100%", 
+              /* 🌟 核心魔法：根據算式長度，動態縮小字體 (長度>14變22px，>9變32px，平常42px) */
+              fontSize: String(amount).length > 14 ? 22 : String(amount).length > 9 ? 32 : 42, 
+              fontWeight:900, 
+              border:"2px solid #F3F4F6", 
+              borderRadius:12, 
+              padding:"16px 16px 16px 48px", 
+              color: showKeypad ? "#F59E0B" : "#1a1a1a", 
+              background: showKeypad ? "#FFFBEB" : "#F9FAFB", 
+              outline:"none", 
+              cursor:"pointer", 
+              transition:"font-size 0.2s ease, background 0.2s ease", // 加入字體縮放的滑順動畫
+              /* 🌟 最後的安全網：如果縮到最小還是太長，就允許在框框內左右滑動 */
+              textOverflow: "ellipsis",
+              overflowX: "auto"
+            }} 
+          />
+        </div>
         {showKeypad && (<div ref={keypadRef} style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginTop: 18, animation: "slideUp 0.2s ease" }}>{[{ l: '7', v: '7' }, { l: '8', v: '8' }, { l: '9', v: '9' }, { l: '⌫', v: 'BACK', bg: '#FEE2E2', c: '#EF4444' },{ l: '4', v: '4' }, { l: '5', v: '5' }, { l: '6', v: '6' }, { l: '＋', v: '+', bg: '#FEF3C7', c: '#F59E0B' },{ l: '1', v: '1' }, { l: '2', v: '2' }, { l: '3', v: '3' }, { l: '－', v: '-', bg: '#FEF3C7', c: '#F59E0B' },{ l: 'C', v: 'CLEAR', bg: '#F3F4F6', c: '#6B7280' }, { l: '0', v: '0' }, { l: '×', v: '*', bg: '#FEF3C7', c: '#F59E0B' }, { l: '÷', v: '/', bg: '#FEF3C7', c: '#F59E0B' }].map(k => (<button key={k.l} type="button" onClick={(e) => { e.preventDefault(); if (k.v === 'BACK') setAmount(prev => String(prev).slice(0, -1)); else if (k.v === 'CLEAR') setAmount(""); else setAmount(prev => String(prev) + k.v); }} style={{ padding: "16px 0", fontSize: 26, fontWeight: 900, borderRadius: 14, border: "none", background: k.bg || '#fff', color: k.c || '#1a1a1a', boxShadow: "0 2px 6px rgba(0,0,0,0.06)", cursor: "pointer", fontFamily: "inherit" }}>{k.l}</button>))}<button type="button" onClick={(e) => { e.preventDefault(); setShowKeypad(false); }} style={{ gridColumn: "span 4", padding: "16px 0", fontSize: 18, fontWeight: 900, borderRadius: 14, border: "none", background: '#1a1a1a', color: '#fff', boxShadow: "0 4px 12px rgba(0,0,0,0.15)", cursor: "pointer", fontFamily: "inherit", marginTop: 6, letterSpacing:2 }}>完成</button></div>)}
         <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2} style={{ width:"100%", marginTop:16, fontSize:16, fontWeight:500, border:"2px solid #F3F4F6", borderRadius:12, padding:"14px 16px", color:"#374151", background:"#F9FAFB", outline:"none", resize:"none", lineHeight:1.6 }} />
         {(() => {
