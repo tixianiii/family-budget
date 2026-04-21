@@ -433,7 +433,8 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ fontWeight: 900, fontSize: 16, color: '#1a1a1a' }}>{r.categoryLabel}</span>
                               {/* 🌟 貼心小設計：如果有平分，會標示出來 */}
-                              {r.splitCount > 1 && <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 4, fontWeight: 900 }}>{r.splitCount}人平分</span>}
+                              {/* 🌟 改成直接顯示參與平分的成員名字 */}
+{r.splitCount > 1 && <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 4, fontWeight: 900, whiteSpace: "nowrap" }}>{String(r.member).replace(/,/g, "、")} 平分</span>}
                             </div>
                             <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, fontWeight: 700 }}>
                               {r.date.substring(5).replace('-','/')} {r.note ? ` • ${r.note}` : ''}
