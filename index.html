@@ -70,6 +70,61 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 const formatDate = (str) => { const clean = cleanDate(str); const parts = clean.split("-"); return parts.length !== 3 ? clean : `${parts[0]}年${parts[1]}月${parts[2]}日`; };
 const formatMoney = (n) => `$${Number(n).toLocaleString()}`;
 
+
+// 🌟 100% 繁體純臺灣版節日與農曆字典 (封殺中國套件輸出)
+const lunarMonths = ["", "正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "臘月"];
+const lunarDays = ["", "初一", "初二", "初三", "初四", "初五", "初六", "初七", "初八", "初九", "初十", "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十", "廿一", "廿二", "廿三", "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"];
+
+const twSolarFestivals = {
+  "01-01": "元旦", "02-14": "情人節", "02-28": "和平紀念日", "04-04": "兒童節",
+  "05-01": "勞動節", "08-08": "父親節", "09-28": "教師節", "10-10": "國慶日",
+  "10-31": "萬聖節", "12-25": "聖誕節"
+};
+
+const twLunarFestivals = {
+  "01-01": "春節", "01-02": "初二(回娘家)", "01-15": "元宵節", "05-05": "端午節",
+  "07-07": "七夕", "07-15": "中元節", "08-15": "中秋節", "09-09": "重陽節",
+  "12-08": "臘八", "12-24": "送神"
+};
+
+const getLunarText = (y, m, d) => {
+  if (typeof Solar === 'undefined') return { text: "", festival: "", fullLunar: "" };
+  try {
+    const lunar = Solar.fromYmd(y, m, d).getLunar();
+    const lMonth = Math.abs(lunar.getMonth());
+    const lDay = lunar.getDay();
+    const solarMd = String(m).padStart(2,'0') + "-" + String(d).padStart(2,'0');
+    const lunarMd = String(lMonth).padStart(2,'0') + "-" + String(lDay).padStart(2,'0');
+
+    let text = lunarDays[lDay] || "";
+    if (lDay === 1) text = lunarMonths[lMonth];
+
+    let festivals = [];
+    if (twSolarFestivals[solarMd]) festivals.push(twSolarFestivals[solarMd]);
+    if (twLunarFestivals[lunarMd]) festivals.push(twLunarFestivals[lunarMd]);
+    
+    // 獨立處理除夕 (因為可能是臘月29或30)
+    if (lunar.getMonth() === 12 && lDay === lunar.getMonthDays() && !festivals.includes("除夕")) {
+      festivals.push("除夕");
+    }
+
+    // 強制將簡體節氣轉換為繁體
+    const jq = lunar.getJieQi();
+    if (jq) {
+      const jqTrad = jq.replace('惊蛰','驚蟄').replace('谷雨','穀雨').replace('小满','小滿').replace('芒种','芒種').replace('处暑','處暑');
+      festivals.push(jqTrad);
+    }
+
+    return { 
+      text, 
+      festival: festivals.join("、"), 
+      fullLunar: `農曆 ${lunarMonths[lMonth]}${lunarDays[lDay]}` 
+    };
+  } catch (e) {
+    return { text: "", festival: "", fullLunar: "" };
+  }
+};
+
 const getDayDetailInfo = (dateStr) => {
   if (!dateStr) return null;
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -77,18 +132,9 @@ const getDayDetailInfo = (dateStr) => {
   
   let info = { lunar: "", festival: "", birthday: "" };
   
-  if (typeof Solar !== 'undefined') {
-    try {
-      const solar = Solar.fromYmd(y, m, d);
-      const lunar = solar.getLunar();
-      info.lunar = `農曆 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`;
-      
-      const lFest = lunar.getFestivals();
-      const sFest = solar.getFestivals();
-      const jieQi = lunar.getJieQi();
-      info.festival = [...lFest, ...sFest, jieQi].filter(x => x).join("、");
-    } catch (e) {}
-  }
+  const lInfo = getLunarText(y, m, d);
+  info.lunar = lInfo.fullLunar;
+  info.festival = lInfo.festival;
   
   const bdayMember = MEMBERS.find(mem => mem.birthday === md);
   if (bdayMember) info.birthday = `${bdayMember.label} 生日快樂！🎂`;
@@ -127,8 +173,10 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
           const isSelected = date === currentCellDateStr;
           const isToday = todayStr === currentCellDateStr;
           const total = dailyTotals[currentCellDateStr] || 0;
-          let lunarText = "";
-          if (typeof Solar !== 'undefined') { try { lunarText = Solar.fromYmd(selYear, selMonth, day).getLunar().getDayInChinese(); } catch (e) {} }
+          
+          // 🌟 換成我們純手寫的繁體農曆轉換器
+          const { text: lunarText } = getLunarText(selYear, selMonth, day);
+          
           return (
             <div key={day} onClick={() => setDate(currentCellDateStr)}
               style={{
@@ -342,6 +390,7 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
     <>
       <CalendarPicker date={date} setDate={setDate} records={records} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} />
       
+      {/* 🌟 情報區更新：乾淨的排版 */}
       <div style={{ background: "#FFFBEB", borderRadius: 16, padding: "12px 20px", marginBottom: 16, border: "1px solid #FEF3C7", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, animation: "slideUp 0.3s ease" }}>
         <span style={{ fontSize: 16 }}>📅</span>
         <div style={{ flex: 1 }}>
