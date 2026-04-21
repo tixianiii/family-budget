@@ -124,6 +124,7 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
 function App() {
   const [tab, setTab] = useState(0);
   const [records, setRecords] = useState([]);
+  const [prevRecords, setPrevRecords] = useState([]); // 🌟 儲存上個月的紀錄用來比對
   const [loading, setLoading] = useState(true);
   const [selYear, setSelYear] = useState(new Date().getFullYear());
   const [selMonth, setSelMonth] = useState(new Date().getMonth() + 1);
@@ -134,17 +135,17 @@ function App() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [toast, setToast] = useState(null);
-  
-  // 🌟 搜尋功能的 State
   const [searchQuery, setSearchQuery] = useState("");
 
   const showToast = useCallback((msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }, []);
   
   const fetchRecords = useCallback(async (year, month) => {
+    // 1. 抓取當月資料
     const targetMonth = `${year}_${String(month).padStart(2, '0')}`;
     const cacheKey = `cache_${targetMonth}`;
     const cachedData = localStorage.getItem(cacheKey);
     if (cachedData) { try { setRecords(JSON.parse(cachedData)); setLoading(false); } catch(e) {} } else { setLoading(true); }
+    
     try {
       const res = await fetch(`${APPS_SCRIPT_URL}?month=${targetMonth}`);
       const data = await res.json();
@@ -160,6 +161,27 @@ function App() {
         localStorage.setItem(cacheKey, JSON.stringify(enriched));
       }
     } catch (err) { if (!cachedData) showToast(`連線失敗`, "error"); } finally { setLoading(false); }
+
+    // 2. 🌟 背後偷偷抓取「上個月」資料，用來顯示報表比對
+    let pY = year, pM = month - 1;
+    if (pM === 0) { pY -= 1; pM = 12; }
+    const prevTargetMonth = `${pY}_${String(pM).padStart(2, '0')}`;
+    const prevCacheKey = `cache_${prevTargetMonth}`;
+    const prevCachedData = localStorage.getItem(prevCacheKey);
+    if (prevCachedData) { try { setPrevRecords(JSON.parse(prevCachedData)); } catch(e) {} } else { setPrevRecords([]); }
+    
+    fetch(`${APPS_SCRIPT_URL}?month=${prevTargetMonth}`).then(res => res.json()).then(data => {
+      if (data.status === "ok") {
+        const enriched = data.records.map(r => {
+          const cat = getCatById(r.categoryLabel);
+          const memberNames = String(r.member || "").split(/[、,]/).map(name => name.trim()).filter(n => n);
+          const memObjs = memberNames.map(name => MEMBERS.find(m => m.label === name) || MEMBERS[0]);
+          return { ...r, date: cleanDate(r.date), category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, memberObjs: memObjs };
+        });
+        setPrevRecords(enriched);
+        localStorage.setItem(prevCacheKey, JSON.stringify(enriched));
+      }
+    }).catch(() => {});
   }, [showToast]);
 
   useEffect(() => { fetchRecords(selYear, selMonth); }, [selYear, selMonth, fetchRecords]);
@@ -234,15 +256,13 @@ function App() {
     } catch(err) { showToast("❌ 背景修改失敗", "error"); }
   };
 
-  // 🌟 一鍵複製邏輯
   const handleDuplicate = (r) => {
     const cat = CATEGORIES.find(c => c.id === r.category);
     setCategory(cat);
     setSubCategory(r.subCategory);
     setAmount(String(r.amount));
-    setNote(r.note ? r.note.replace(/^'/, '') : ""); // 去掉開頭的防呆單引號
+    setNote(r.note ? r.note.replace(/^'/, '') : ""); 
     setSelectedMembers(r.memberObjs || []);
-    
     window.scrollTo({ top: 0, behavior: 'smooth' });
     showToast("💡 已複製內容，可直接修改或新增");
   };
@@ -266,7 +286,7 @@ function App() {
         </div>
       </div>
       <div style={{ maxWidth:480, margin:"0 auto", padding:"20px 16px 80px" }}>
-        {tab === 0 ? <FormView date={date} setDate={setDate} selectedMembers={selectedMembers} onMemberToggle={toggleMember} category={category} onCategorySelect={c => {setCategory(c); setSubCategory(null);}} subCategory={subCategory} setSubCategory={setSubCategory} amount={amount} setAmount={setAmount} note={note} setNote={setNote} onSubmit={handleSubmit} records={records} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} onDelete={handleDelete} onUpdate={handleUpdate} onDuplicate={handleDuplicate} loading={loading} searchQuery={searchQuery} setSearchQuery={setSearchQuery} /> : <DashboardView records={records} loading={loading} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} />}
+        {tab === 0 ? <FormView date={date} setDate={setDate} selectedMembers={selectedMembers} onMemberToggle={toggleMember} category={category} onCategorySelect={c => {setCategory(c); setSubCategory(null);}} subCategory={subCategory} setSubCategory={setSubCategory} amount={amount} setAmount={setAmount} note={note} setNote={setNote} onSubmit={handleSubmit} records={records} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} onDelete={handleDelete} onUpdate={handleUpdate} onDuplicate={handleDuplicate} loading={loading} searchQuery={searchQuery} setSearchQuery={setSearchQuery} /> : <DashboardView records={records} prevRecords={prevRecords} loading={loading} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} />}
       </div>
     </div>
   );
@@ -282,7 +302,6 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
   const keypadRef = useRef(null);
   useEffect(() => { if (showKeypad && keypadRef.current) setTimeout(() => keypadRef.current.scrollIntoView({ behavior: "smooth", block: "end" }), 150); }, [showKeypad]);
 
-  // 🌟 搜尋過濾邏輯 (如果搜尋框有字，就在全月的資料裡面找)
   const displayRecords = searchQuery.trim() 
     ? records.filter(r => 
         (r.note || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -341,14 +360,12 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
       
       <div style={{ marginTop:30 }}>
         
-        {/* 🌟 新增的搜尋框 */}
         <div style={{ position: "relative", marginBottom: 20 }}>
           <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 16 }}>🔍</span>
           <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜尋全月紀錄 (備註、類別或成員)..." style={{ width: "100%", padding: "12px 16px 12px 40px", borderRadius: 99, border: "2px solid #E5E7EB", background: "#fff", outline: "none", fontSize: 15, fontWeight: 500, color: "#374151" }} />
           {searchQuery && (<button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9CA3AF", fontSize: 16, cursor: "pointer", fontWeight: 900 }}>✕</button>)}
         </div>
 
-        {/* 🌟 動態標題：顯示是哪天的紀錄，或是搜尋的總計 */}
         <SectionLabel>
           {searchQuery.trim() ? `🔍 搜尋 "${searchQuery}" 的結果` : `🕐 ${formatDate(date)} 記錄`}
         </SectionLabel>
@@ -377,14 +394,12 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
                     </div>
                   </div>
                   <div style={{ fontSize:13, color:"#9CA3AF", marginTop:4, fontWeight:500 }}>
-                    {/* 如果是在搜尋模式，額外顯示這是哪一天的紀錄，方便辨識 */}
                     {searchQuery.trim() && <span style={{color: "#F59E0B", fontWeight: 700, marginRight: 6}}>[{r.date.substring(5).replace('-','/')}]</span>}
-                    {r.note || "無備註"}
+                    {r.note ? r.note.replace(/^'/, '') : "無備註"}
                   </div>
                 </div>
                 <div style={{ fontWeight:900, fontSize:15, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
                 
-                {/* 🌟 三角形防誤觸按鈕區 */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, marginLeft: 4, flexShrink:0 }}>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={() => { setEditId(r.id); setEditAmt(r.amount); setEditNote(r.note ? r.note.replace(/^'/, '') : ""); setConfirmId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, padding:2 }}>✏️</button>
@@ -404,24 +419,73 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
   );
 }
 
-function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSelMonth }) {
+function DashboardView({ records, prevRecords, loading, selYear, setSelYear, selMonth, setSelMonth }) {
   const categoryTotals = CATEGORIES.map(cat => ({ ...cat, total: records.filter(r => r.category === cat.id).reduce((s, r) => s + r.amount, 0) })).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
+  
   const totalSpend = records.reduce((s, r) => s + r.amount, 0);
+  // 🌟 計算上個月的總支出，用來做差額對比
+  const prevTotalSpend = prevRecords.reduce((s, r) => s + r.amount, 0);
+  const diff = totalSpend - prevTotalSpend;
+
   const RADIAN = Math.PI / 180;
   const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => { if (percent < 0.05) return null; const r = innerRadius + (outerRadius - innerRadius) * 0.5; const x = cx + r * Math.cos(-midAngle * RADIAN); const y = cy + r * Math.sin(-midAngle * RADIAN); return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={14} fontWeight={900}>{`${(percent*100).toFixed(0)}%`}</text>; };
+  
   const prevMonth = () => { if (selMonth === 1) { setSelYear(y => y-1); setSelMonth(12); } else setSelMonth(m => m-1); };
   const nextMonth = () => { if (selMonth === 12) { setSelYear(y => y+1); setSelMonth(1); } else setSelMonth(m => m+1); };
   
   const [detailMember, setDetailMember] = useState(null);
+  // 🌟 新增：控制類別明細彈出視窗的 State
+  const [detailCategory, setDetailCategory] = useState(null);
 
   return (
     <>
       <Card><div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}><button onClick={prevMonth} style={{ width:44, height:44, borderRadius:99, border:"2px solid #F3F4F6", background:"#F9FAFB", fontSize:24, cursor:"pointer", fontWeight:900 }}>‹</button><div style={{ textAlign:"center" }}><div style={{ fontSize:24, fontWeight:900, color:"#1a1a1a" }}>{selYear}年{String(selMonth).padStart(2,"0")}月</div></div><button onClick={nextMonth} style={{ width:44, height:44, borderRadius:99, border:"2px solid #F3F4F6", background:"#F9FAFB", fontSize:24, cursor:"pointer", fontWeight:900 }}>›</button></div></Card>
       {loading ? <div style={{ textAlign:"center", padding:"50px 20px", color:"#9CA3AF" }}><div style={{ fontSize:36, marginBottom:16 }}>⏳</div><div style={{ fontSize:18, fontWeight:900 }}>載入資料中...</div></div> : records.length === 0 ? <div style={{ textAlign:"center", padding:"50px 20px", color:"#9CA3AF" }}><div style={{ fontSize:56, marginBottom:16 }}>📭</div><div style={{ fontSize:18, fontWeight:900, color:"#374151" }}>這個月沒有記錄</div></div> : (
         <>
-          <Card style={{ background:"#1a1a1a" }}><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}><div><div style={{ color:"#9CA3AF", fontSize:14, fontWeight:700 }}>當月支出</div><div style={{ color:"#F59E0B", fontSize:38, fontWeight:900, letterSpacing:-1, marginTop:4 }}>{formatMoney(totalSpend)}</div></div><div style={{ textAlign:"right" }}><div style={{ color:"#9CA3AF", fontSize:14, fontWeight:700 }}>筆數</div><div style={{ color:"#fff", fontSize:38, fontWeight:900, marginTop:4 }}>{records.length}</div></div></div></Card>
+          <Card style={{ background:"#1a1a1a" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <div style={{ color:"#9CA3AF", fontSize:14, fontWeight:700 }}>當月支出</div>
+                <div style={{ color:"#F59E0B", fontSize:38, fontWeight:900, letterSpacing:-1, marginTop:4 }}>{formatMoney(totalSpend)}</div>
+                {/* 🌟 月度比較標籤：比上個月省錢或多花 */}
+                {prevRecords.length > 0 && (
+                  <div style={{ fontSize: 13, marginTop: 6, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                    {diff > 0 ? (
+                      <span style={{ color: "#EF4444", background: "#FEE2E2", padding: "2px 6px", borderRadius: 4 }}>📈 比上月多 {formatMoney(diff)}</span>
+                    ) : diff < 0 ? (
+                      <span style={{ color: "#10B981", background: "#D1FAE5", padding: "2px 6px", borderRadius: 4 }}>📉 比上月少 {formatMoney(Math.abs(diff))}</span>
+                    ) : (
+                      <span style={{ color: "#9CA3AF", background: "#374151", padding: "2px 6px", borderRadius: 4 }}>➖ 與上月持平</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ color:"#9CA3AF", fontSize:14, fontWeight:700 }}>筆數</div>
+                <div style={{ color:"#fff", fontSize:38, fontWeight:900, marginTop:4 }}>{records.length}</div>
+              </div>
+            </div>
+          </Card>
+
           <Card><SectionLabel>📊 支出類別比例</SectionLabel><ResponsiveContainer width="100%" height={280}><PieChart><Pie data={categoryTotals} dataKey="total" nameKey="label" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={renderLabel}>{categoryTotals.map((cat, i) => <Cell key={i} fill={cat.color} />)}</Pie><Tooltip formatter={(v, n) => [formatMoney(v), n]} /><Legend formatter={(v) => <span style={{ fontSize:14, fontWeight:700 }}>{v}</span>} /></PieChart></ResponsiveContainer></Card>
-          <Card><SectionLabel>🏆 類別排行榜</SectionLabel>{categoryTotals.map((cat) => (<div key={cat.id} style={{ marginBottom:18 }}><div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:8 }}><div style={{ width:32, height:32, borderRadius:10, background:cat.color+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>{cat.emoji}</div><span style={{ flex:1, fontWeight:900, fontSize:17, color:"#1a1a1a" }}>{cat.label}</span><span style={{ fontWeight:900, fontSize:18, color:cat.color }}>{formatMoney(cat.total)}</span><span style={{ fontSize:14, color:"#9CA3AF", width:44, textAlign:"right", fontWeight:700 }}>{totalSpend > 0 ? ((cat.total/totalSpend)*100).toFixed(1) : 0}%</span></div><div style={{ height:8, background:"#F3F4F6", borderRadius:99, overflow:"hidden" }}><div style={{ height:"100%", background:cat.color, borderRadius:99, width:`${totalSpend > 0 ? (cat.total/totalSpend)*100 : 0}%`, transition:"width 0.5s ease" }} /></div></div>))}</Card>
+          
+          <Card>
+            <SectionLabel>🏆 類別排行榜 (點擊看明細)</SectionLabel>
+            {categoryTotals.map((cat) => (
+              <div key={cat.id} onClick={() => setDetailCategory(cat)} style={{ marginBottom:18, cursor: "pointer", transition: "opacity 0.2s" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:8 }}>
+                  <div style={{ width:32, height:32, borderRadius:10, background:cat.color+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>{cat.emoji}</div>
+                  <span style={{ flex:1, fontWeight:900, fontSize:17, color:"#1a1a1a" }}>{cat.label}</span>
+                  <span style={{ fontWeight:900, fontSize:18, color:cat.color }}>{formatMoney(cat.total)}</span>
+                  <span style={{ fontSize:14, color:"#9CA3AF", width:44, textAlign:"right", fontWeight:700 }}>{totalSpend > 0 ? ((cat.total/totalSpend)*100).toFixed(1) : 0}%</span>
+                </div>
+                <div style={{ height:8, background:"#F3F4F6", borderRadius:99, overflow:"hidden" }}>
+                  <div style={{ height:"100%", background:cat.color, borderRadius:99, width:`${totalSpend > 0 ? (cat.total/totalSpend)*100 : 0}%`, transition:"width 0.5s ease" }} />
+                </div>
+              </div>
+            ))}
+          </Card>
+
           <Card>
             <SectionLabel>👥 成員支出 (點擊看明細)</SectionLabel>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12 }}>
@@ -430,18 +494,12 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
                   const memStr = String(r.member || "");
                   if (!memStr) return sum;
                   const memList = memStr.split(/[、,]/).map(name => name.trim()).filter(n => n);
-                  if (memList.includes(m.label)) {
-                    return sum + Math.round(r.amount / memList.length);
-                  }
+                  if (memList.includes(m.label)) { return sum + Math.round(r.amount / memList.length); }
                   return sum;
                 }, 0);
                 return (
                   <div key={m.id} onClick={() => setDetailMember(m)} style={{ background: total > 0 ? m.color+"12" : "#F9FAFB", border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`, borderRadius:16, padding:"18px 14px", textAlign:"center", cursor: "pointer", transition: "all 0.15s" }}>
-                    {m.image ? (
-                      <img src={m.image} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", margin: "0 auto", marginBottom: 6, display: "block" }} alt={m.label} />
-                    ) : (
-                      <div style={{ fontSize:32 }}>{m.emoji}</div>
-                    )}
+                    {m.image ? ( <img src={m.image} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", margin: "0 auto", marginBottom: 6, display: "block" }} alt={m.label} /> ) : ( <div style={{ fontSize:32 }}>{m.emoji}</div> )}
                     <div style={{ fontWeight:900, fontSize:15, color:"#374151", marginTop:6 }}>{m.label}</div>
                     <div style={{ fontWeight:900, fontSize:20, color: total > 0 ? m.color : "#D1D5DB", marginTop:6 }}>{formatMoney(total)}</div>
                   </div>
@@ -450,15 +508,13 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
             </div>
           </Card>
 
-          {/* 🌟 報表明細彈出視窗 */}
+          {/* 成員明細彈出視窗 */}
           {detailMember && (() => {
             let memberRecords = [];
             records.forEach(r => {
               const memStr = String(r.member || "");
               const memList = memStr.split(/[、,]/).map(name => name.trim()).filter(n => n);
-              if (memList.includes(detailMember.label)) {
-                memberRecords.push({ ...r, splitAmount: Math.round(r.amount / memList.length), splitCount: memList.length });
-              }
+              if (memList.includes(detailMember.label)) { memberRecords.push({ ...r, splitAmount: Math.round(r.amount / memList.length), splitCount: memList.length }); }
             });
             memberRecords.sort((a, b) => b.splitAmount - a.splitAmount);
 
@@ -473,18 +529,13 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
                     <button onClick={() => setDetailMember(null)} style={{ background: '#F3F4F6', border: 'none', width: 32, height: 32, borderRadius: '50%', fontSize: 16, cursor: 'pointer', color: '#6B7280', fontWeight: 900, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
                   </div>
                   <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1 }}>
-                    {memberRecords.length === 0 ? (
-                       <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0', fontWeight: 700 }}>這個月還沒有花費喔！</div>
-                    ) : (
+                    {memberRecords.length === 0 ? ( <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0', fontWeight: 700 }}>這個月還沒有花費喔！</div> ) : (
                       memberRecords.map(r => (
                         <div key={r.id} style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', borderLeft: `6px solid ${r.categoryColor}` }}>
-                          <div style={{ width: 40, height: 40, borderRadius: 12, background: (r.categoryColor||'#ccc')+'22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                            {r.categoryEmoji}
-                          </div>
+                          <div style={{ width: 40, height: 40, borderRadius: 12, background: (r.categoryColor||'#ccc')+'22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{r.categoryEmoji}</div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ fontWeight: 900, fontSize: 16, color: '#1a1a1a' }}>{r.categoryLabel}</span>
-                              {/* 🌟 顯示平分成員的標籤 */}
                               {r.splitCount > 1 && <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 4, fontWeight: 900, whiteSpace: "nowrap" }}>{String(r.member).replace(/,/g, "、")} 平分</span>}
                             </div>
                             <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, fontWeight: 700 }}>
@@ -498,6 +549,47 @@ function DashboardView({ records, loading, selYear, setSelYear, selMonth, setSel
                   </div>
                 </div>
               </div>
+            );
+          })()}
+
+          {/* 🌟 類別分析彈出視窗 */}
+          {detailCategory && (() => {
+            const catRecords = records.filter(r => r.category === detailCategory.id);
+            const subTotals = {};
+            catRecords.forEach(r => {
+                const sub = r.subCategory || "未分類";
+                subTotals[sub] = (subTotals[sub] || 0) + r.amount;
+            });
+            const subList = Object.entries(subTotals).map(([label, total]) => ({ label, total })).sort((a,b) => b.total - a.total);
+            const catTotal = catRecords.reduce((s, r) => s + r.amount, 0);
+
+            return (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', animation: 'fadeIn 0.2s ease' }} onClick={() => setDetailCategory(null)}>
+                  <div style={{ background: '#F8F7F4', width: '100%', maxWidth: 480, maxHeight: '85vh', borderTopLeftRadius: 24, borderTopRightRadius: 24, display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', paddingBottom: 20 }} onClick={e => e.stopPropagation()}>
+                    <div style={{ padding: '20px 24px', background: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F3F4F6' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{width: 36, height: 36, borderRadius: 10, background: detailCategory.color+"22", display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20}}>{detailCategory.emoji}</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: '#1a1a1a' }}>{detailCategory.label} 分析</div>
+                      </div>
+                      <button onClick={() => setDetailCategory(null)} style={{ background: '#F3F4F6', border: 'none', width: 32, height: 32, borderRadius: '50%', fontSize: 16, cursor: 'pointer', color: '#6B7280', fontWeight: 900, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                    </div>
+                    <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1 }}>
+                       {subList.length === 0 ? (
+                           <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0', fontWeight: 700 }}>這個類別沒有明細喔！</div>
+                       ) : (
+                         subList.map(sub => (
+                             <div key={sub.label} style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                               <div style={{ fontWeight: 900, fontSize: 16, color: '#1a1a1a' }}>{sub.label}</div>
+                               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                 <span style={{ fontWeight: 900, fontSize: 18, color: detailCategory.color }}>{formatMoney(sub.total)}</span>
+                                 <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 700, width: 44, textAlign: 'right' }}>{((sub.total / catTotal) * 100).toFixed(1)}%</span>
+                               </div>
+                             </div>
+                         ))
+                       )}
+                    </div>
+                  </div>
+                </div>
             );
           })()}
         </>
