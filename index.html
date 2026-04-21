@@ -43,7 +43,6 @@ const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyv5ROh9LiMjcDsfdp4u1pmpxKgCX0O9yJL02Bv2XC-SzDNwxbTKjK4XRh9SIOIyAtk/exec";
 
-// 🌟 已補上家人生日資訊
 const MEMBERS = [
   { id: "dad", label: "騏騏", emoji: "👨", color: "#3B82F6", birthday: "06-16" },
   { id: "mom", label: "潔潔", emoji: "👩", color: "#EC4899", birthday: "10-18" },
@@ -71,11 +70,10 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 const formatDate = (str) => { const clean = cleanDate(str); const parts = clean.split("-"); return parts.length !== 3 ? clean : `${parts[0]}年${parts[1]}月${parts[2]}日`; };
 const formatMoney = (n) => `$${Number(n).toLocaleString()}`;
 
-// 🌟 核心小助手：根據日期抓取生日、節慶、農曆資訊
 const getDayDetailInfo = (dateStr) => {
   if (!dateStr) return null;
   const [y, m, d] = dateStr.split("-").map(Number);
-  const md = dateStr.substring(5); // 取 MM-DD 格式
+  const md = dateStr.substring(5);
   
   let info = { lunar: "", festival: "", birthday: "" };
   
@@ -85,7 +83,6 @@ const getDayDetailInfo = (dateStr) => {
       const lunar = solar.getLunar();
       info.lunar = `農曆 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`;
       
-      // 抓取農曆節氣與重大節日
       const lFest = lunar.getFestivals();
       const sFest = solar.getFestivals();
       const jieQi = lunar.getJieQi();
@@ -93,7 +90,6 @@ const getDayDetailInfo = (dateStr) => {
     } catch (e) {}
   }
   
-  // 檢查家人生日
   const bdayMember = MEMBERS.find(mem => mem.birthday === md);
   if (bdayMember) info.birthday = `${bdayMember.label} 生日快樂！🎂`;
   
@@ -346,7 +342,6 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
     <>
       <CalendarPicker date={date} setDate={setDate} records={records} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} />
       
-      {/* 🌟 節慶與生日情報區 (日曆下方、成員上方) */}
       <div style={{ background: "#FFFBEB", borderRadius: 16, padding: "12px 20px", marginBottom: 16, border: "1px solid #FEF3C7", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, animation: "slideUp 0.3s ease" }}>
         <span style={{ fontSize: 16 }}>📅</span>
         <div style={{ flex: 1 }}>
@@ -628,7 +623,7 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
                                <div style={{ fontWeight: 900, fontSize: 16, color: '#1a1a1a' }}>{sub.label}</div>
                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                  <span style={{ fontWeight: 900, fontSize: 18, color: detailCategory.color }}>{formatMoney(sub.total)}</span>
-                                 <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 700, width: 44, textAlign: 'right' }}>{((sub.total / catTotal) * 100).toFixed(1) : 0}%</span>
+                                 <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 700, width: 44, textAlign: 'right' }}>{catTotal > 0 ? ((sub.total / catTotal) * 100).toFixed(1) : 0}%</span>
                                </div>
                              </div>
                          ))
