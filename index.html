@@ -43,11 +43,12 @@ const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyv5ROh9LiMjcDsfdp4u1pmpxKgCX0O9yJL02Bv2XC-SzDNwxbTKjK4XRh9SIOIyAtk/exec";
 
+// 🌟 已補上家人生日資訊
 const MEMBERS = [
-  { id: "dad", label: "騏騏", emoji: "👨", color: "#3B82F6" },
-  { id: "mom", label: "潔潔", emoji: "👩", color: "#EC4899" },
-  { id: "sister", label: "嫻嫻", emoji: "👧", color: "#8B5CF6" },
-  { id: "brother", label: "澤澤", emoji: "🧒", color: "#10B981", image: "zeze.png" },
+  { id: "dad", label: "騏騏", emoji: "👨", color: "#3B82F6", birthday: "06-16" },
+  { id: "mom", label: "潔潔", emoji: "👩", color: "#EC4899", birthday: "10-18" },
+  { id: "sister", label: "嫻嫻", emoji: "👧", color: "#8B5CF6", birthday: "10-19" },
+  { id: "brother", label: "澤澤", emoji: "🧒", color: "#10B981", image: "zeze.png", birthday: "06-13" },
   { id: "whole_family", label: "全家", emoji: "👨‍👩‍👧‍👦", color: "#F59E0B" },
 ];
 
@@ -69,6 +70,35 @@ const cleanDate = (str) => { if (!str) return ""; const d = new Date(str); retur
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const formatDate = (str) => { const clean = cleanDate(str); const parts = clean.split("-"); return parts.length !== 3 ? clean : `${parts[0]}年${parts[1]}月${parts[2]}日`; };
 const formatMoney = (n) => `$${Number(n).toLocaleString()}`;
+
+// 🌟 核心小助手：根據日期抓取生日、節慶、農曆資訊
+const getDayDetailInfo = (dateStr) => {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const md = dateStr.substring(5); // 取 MM-DD 格式
+  
+  let info = { lunar: "", festival: "", birthday: "" };
+  
+  if (typeof Solar !== 'undefined') {
+    try {
+      const solar = Solar.fromYmd(y, m, d);
+      const lunar = solar.getLunar();
+      info.lunar = `農曆 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`;
+      
+      // 抓取農曆節氣與重大節日
+      const lFest = lunar.getFestivals();
+      const sFest = solar.getFestivals();
+      const jieQi = lunar.getJieQi();
+      info.festival = [...lFest, ...sFest, jieQi].filter(x => x).join("、");
+    } catch (e) {}
+  }
+  
+  // 檢查家人生日
+  const bdayMember = MEMBERS.find(mem => mem.birthday === md);
+  if (bdayMember) info.birthday = `${bdayMember.label} 生日快樂！🎂`;
+  
+  return info;
+};
 
 function Card({ children, style }) { return <div style={{ background:"#fff", borderRadius:16, padding:24, marginBottom:16, boxShadow:"0 1px 8px rgba(0,0,0,0.06)", ...style }}>{children}</div>; }
 function SectionLabel({ children }) { return <div style={{ fontSize:14, fontWeight:900, color:"#9CA3AF", letterSpacing:1.5, marginBottom:12 }}>{children}</div>; }
@@ -124,7 +154,7 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
 function App() {
   const [tab, setTab] = useState(0);
   const [records, setRecords] = useState([]);
-  const [prevRecords, setPrevRecords] = useState([]); // 🌟 儲存上個月的紀錄用來比對
+  const [prevRecords, setPrevRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selYear, setSelYear] = useState(new Date().getFullYear());
   const [selMonth, setSelMonth] = useState(new Date().getMonth() + 1);
@@ -140,7 +170,6 @@ function App() {
   const showToast = useCallback((msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }, []);
   
   const fetchRecords = useCallback(async (year, month) => {
-    // 1. 抓取當月資料
     const targetMonth = `${year}_${String(month).padStart(2, '0')}`;
     const cacheKey = `cache_${targetMonth}`;
     const cachedData = localStorage.getItem(cacheKey);
@@ -162,7 +191,6 @@ function App() {
       }
     } catch (err) { if (!cachedData) showToast(`連線失敗`, "error"); } finally { setLoading(false); }
 
-    // 2. 🌟 背後偷偷抓取「上個月」資料，用來顯示報表比對
     let pY = year, pM = month - 1;
     if (pM === 0) { pY -= 1; pM = 12; }
     const prevTargetMonth = `${pY}_${String(pM).padStart(2, '0')}`;
@@ -300,6 +328,9 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
   const [editNote, setEditNote] = useState("");
   const [showKeypad, setShowKeypad] = useState(false);
   const keypadRef = useRef(null);
+  
+  const dayInfo = getDayDetailInfo(date);
+
   useEffect(() => { if (showKeypad && keypadRef.current) setTimeout(() => keypadRef.current.scrollIntoView({ behavior: "smooth", block: "end" }), 150); }, [showKeypad]);
 
   const displayRecords = searchQuery.trim() 
@@ -315,6 +346,22 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
     <>
       <CalendarPicker date={date} setDate={setDate} records={records} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} />
       
+      {/* 🌟 節慶與生日情報區 (日曆下方、成員上方) */}
+      <div style={{ background: "#FFFBEB", borderRadius: 16, padding: "12px 20px", marginBottom: 16, border: "1px solid #FEF3C7", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, animation: "slideUp 0.3s ease" }}>
+        <span style={{ fontSize: 16 }}>📅</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+            <span style={{ fontSize: 15, fontWeight: 900, color: "#92400E" }}>{dayInfo?.lunar}</span>
+            {dayInfo?.festival && <span style={{ fontSize: 13, fontWeight: 700, color: "#D97706" }}>{dayInfo.festival}</span>}
+          </div>
+          {dayInfo?.birthday && (
+            <div style={{ marginTop: 4, color: "#EF4444", fontSize: 15, fontWeight: 900, animation: "fadeIn 0.5s ease" }}>
+              🎂 {dayInfo.birthday}
+            </div>
+          )}
+        </div>
+      </div>
+
       <Card>
         <SectionLabel>👤 成員 (可複選)</SectionLabel>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8 }}>
@@ -322,7 +369,11 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
             const isSelected = selectedMembers.some(p => p.id === m.id);
             return (
               <button key={m.id} onClick={() => onMemberToggle(m)} style={{ padding:"14px 4px", border:`2px solid ${isSelected ? m.color : "#F3F4F6"}`, borderRadius:14, background: isSelected ? m.color+"18" : "#F9FAFB", cursor:"pointer", textAlign:"center", transition:"all 0.15s" }}>
-                <div style={{ fontSize:28, filter: isSelected ? "none" : "grayscale(1) opacity(0.5)" }}>{m.emoji}</div>
+                {m.image ? (
+                  <img src={m.image} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", margin: "0 auto", display: "block", filter: isSelected ? "none" : "grayscale(1) opacity(0.5)" }} />
+                ) : (
+                  <div style={{ fontSize:28, filter: isSelected ? "none" : "grayscale(1) opacity(0.5)" }}>{m.emoji}</div>
+                )}
                 <div style={{ fontSize:15, fontWeight:700, color: isSelected ? m.color : "#9CA3AF", marginTop:6 }}>{m.label}</div>
               </button>
             );
@@ -423,7 +474,6 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
   const categoryTotals = CATEGORIES.map(cat => ({ ...cat, total: records.filter(r => r.category === cat.id).reduce((s, r) => s + r.amount, 0) })).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
   
   const totalSpend = records.reduce((s, r) => s + r.amount, 0);
-  // 🌟 計算上個月的總支出，用來做差額對比
   const prevTotalSpend = prevRecords.reduce((s, r) => s + r.amount, 0);
   const diff = totalSpend - prevTotalSpend;
 
@@ -434,7 +484,6 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
   const nextMonth = () => { if (selMonth === 12) { setSelYear(y => y+1); setSelMonth(1); } else setSelMonth(m => m+1); };
   
   const [detailMember, setDetailMember] = useState(null);
-  // 🌟 新增：控制類別明細彈出視窗的 State
   const [detailCategory, setDetailCategory] = useState(null);
 
   return (
@@ -447,7 +496,6 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
               <div>
                 <div style={{ color:"#9CA3AF", fontSize:14, fontWeight:700 }}>當月支出</div>
                 <div style={{ color:"#F59E0B", fontSize:38, fontWeight:900, letterSpacing:-1, marginTop:4 }}>{formatMoney(totalSpend)}</div>
-                {/* 🌟 月度比較標籤：比上個月省錢或多花 */}
                 {prevRecords.length > 0 && (
                   <div style={{ fontSize: 13, marginTop: 6, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
                     {diff > 0 ? (
@@ -508,7 +556,6 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
             </div>
           </Card>
 
-          {/* 成員明細彈出視窗 */}
           {detailMember && (() => {
             let memberRecords = [];
             records.forEach(r => {
@@ -552,7 +599,6 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
             );
           })()}
 
-          {/* 🌟 類別分析彈出視窗 */}
           {detailCategory && (() => {
             const catRecords = records.filter(r => r.category === detailCategory.id);
             const subTotals = {};
@@ -582,7 +628,7 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
                                <div style={{ fontWeight: 900, fontSize: 16, color: '#1a1a1a' }}>{sub.label}</div>
                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                  <span style={{ fontWeight: 900, fontSize: 18, color: detailCategory.color }}>{formatMoney(sub.total)}</span>
-                                 <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 700, width: 44, textAlign: 'right' }}>{((sub.total / catTotal) * 100).toFixed(1)}%</span>
+                                 <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 700, width: 44, textAlign: 'right' }}>{((sub.total / catTotal) * 100).toFixed(1) : 0}%</span>
                                </div>
                              </div>
                          ))
