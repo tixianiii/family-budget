@@ -2967,7 +2967,7 @@ function QueueApp() {
     setSelMonth(Number(month));
   }, [date]);
 
-  function enqueue(payload) {
+  function enqueue(payload, delayMs = 0) {
     try {
       if (readQueue().some(item => item.payload.id === payload.id)) {
         showToast(
@@ -2981,7 +2981,7 @@ function QueueApp() {
         payload,
         created: Date.now(),
         attempts: 0,
-        retryAt: 0
+        retryAt: Date.now() + delayMs
       });
 
       refreshQueue();
@@ -3062,6 +3062,17 @@ function QueueApp() {
   };
 
   const handleDelete = (id, recordDate) => {
+  const record = records.find(record => record.id === id);
+  if (!record || record.duplicateId) return false;
+
+  return enqueue({
+    action: 'delete',
+    id: String(id),
+    requestId: newId(),
+    date: recordDate,
+    expectedVersion: record.version || 0
+  }, 5000);
+}; => {
     const record = records.find(record => record.id === id);
 
     if (!record || record.duplicateId) return false;
@@ -3275,6 +3286,54 @@ function QueueApp() {
           </p>
         )}
 
+       {queue.filter(item =>
+  item.payload.action === 'delete' &&
+  !item.attempts &&
+  !item.fatal
+).map(item => (
+  <div key={'undo-' + item.payload.requestId} style={{
+    padding: 12,
+    marginBottom: 12,
+    background: '#FFF0DA',
+    borderRadius: 12,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8
+  }}>
+    <span>{item.payload.date} 帳目已暫時隱藏</span>
+    <button
+      style={{
+        padding: '8px 12px',
+        border: 0,
+        borderRadius: 8,
+        background: '#A96B43',
+        color: '#fff',
+        whiteSpace: 'nowrap'
+      }}
+      onClick={() => {
+        try {
+          const saved = readQueue().find(entry =>
+            entry.payload.requestId === item.payload.requestId
+          );
+
+          if (!saved || saved.attempts || Date.now() >= saved.retryAt) {
+            showToast('已超過復原時間，刪除已進入同步流程。');
+            return;
+          }
+
+          localStorage.removeItem(Q_PREFIX + saved.payload.requestId);
+          refreshQueue();
+          showToast('已復原，這筆帳目不會刪除');
+        } catch (error) {
+          showToast('復原未成功，請再試一次。', 'error');
+        }
+      }}
+    >
+      復原（5 秒內）
+    </button>
+  </div>
+))}
         {queue.filter(item => item.error).map(item => (
           <div
             key={item.payload.requestId}
