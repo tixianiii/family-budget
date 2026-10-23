@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+
 <script integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
 <script integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
 <script integrity="sha384-/AfDwVDXNopzPvhxMPQ11y1OCpR6mVkWx47qzSwIiquvxkcMkZddEzDNtIOtfCpk" src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js" crossorigin></script>
@@ -20,21 +21,209 @@
 <script integrity="sha384-BHBgQvv/4lYNIRKBbW2tvI11T48cj7sQ4xdSryI8pFNFcnSgl+BeikmOtQB2qpez" src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.4/lunar.min.js" crossorigin="anonymous"></script>
 
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Noto Sans TC', sans-serif; background: #F8F7F4; }
-  ::-webkit-scrollbar { display: none; }
-  @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
-  @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: #F7F3EE;
+    color: #40332D;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  button, input, textarea {
+    font-family: inherit;
+  }
+
+  button {
+    touch-action: manipulation;
+  }
+
+  button:disabled {
+    opacity: .5;
+    cursor: default;
+  }
+
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 3px solid #B96536;
+    outline-offset: 3px;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes veilIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+
+  .sync-time {
+    color: #74665B;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0 2px 14px;
+  }
+
+  .report-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(40,30,24,.48);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: veilIn .18s ease;
+  }
+
+  .report-sheet {
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: #F7F3EE;
+    border-radius: 24px 24px 0 0;
+    overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -8px 40px rgba(40,30,24,.12);
+  }
+
+  .report-head {
+    padding: 18px 20px;
+    background: #fff;
+    border-bottom: 1px solid #E4D9CE;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .report-close {
+    border: 0;
+    background: #F0E9E1;
+    color: #51443B;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 17px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .report-body {
+    padding: 16px 20px 24px;
+    overflow-y: auto;
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+
+  .report-summary {
+    background: #FAE6CF;
+    color: #75452D;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 16px;
+    line-height: 1.7;
+  }
+
+  .report-row {
+    width: 100%;
+    background: #fff;
+    border: 1px solid #EAE0D5;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+    color: #40332D;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .report-row:hover {
+    background: #FFF9F0;
+    border-color: #C8A181;
+  }
+
+  .report-back {
+    border: 1px solid #D8C6B4;
+    background: #fff;
+    color: #75452D;
+    padding: 10px 14px;
+    border-radius: 99px;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    cursor: pointer;
+  }
+
+  .report-entry {
+    background: #fff;
+    border: 1px solid #EAE0D5;
+    border-left: 4px solid #B96536;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+
+  .report-entry p {
+    margin-top: 8px;
+    color: #66584D;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
 </style>
 </head>
-<body>
 
+<body>
 <div id="root">
-  <div style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #1a1a1a; font-family: 'Noto Sans TC', sans-serif;">
-    <div style="font-size: 72px; margin-bottom: 20px; animation: slideUp 0.5s ease;">📒</div>
-    <div style="color: #F59E0B; font-size: 28px; font-weight: 900; letter-spacing: 4px; animation: fadeIn 0.8s ease;">家庭記帳本</div>
-    <div style="color: #9CA3AF; font-size: 16px; font-weight: 700; margin-top: 16px; animation: fadeIn 1.2s ease;">正在載入資料，請稍候...</div>
+  <div style="height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#40332D;font-family:'Noto Sans TC',sans-serif;">
+    <div style="font-size:72px;margin-bottom:20px;">📒</div>
+    <div style="color:#F2BD8D;font-size:28px;font-weight:900;letter-spacing:4px;">家庭記帳本</div>
+    <div style="color:#D8C9BD;font-size:16px;font-weight:700;margin-top:16px;">正在載入資料，請稍候...</div>
   </div>
 </div>
 
@@ -42,203 +231,470 @@
 const { useState, useEffect, useCallback, useRef } = React;
 const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = Recharts;
 
+/* 沿用上一版免金鑰後端的網址 */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyv5ROh9LiMjcDsfdp4u1pmpxKgCX0O9yJL02Bv2XC-SzDNwxbTKjK4XRh9SIOIyAtk/exec";
 
 const MEMBERS = [
-  { id: "dad", label: "騏騏", emoji: "👨", color: "#3B82F6", birthday: "06-16" },
-  { id: "mom", label: "潔潔", emoji: "👩", color: "#EC4899", birthday: "10-18" },
-  { id: "sister", label: "嫻嫻", emoji: "👧", color: "#8B5CF6", birthday: "10-19" },
-  { id: "brother", label: "澤澤", emoji: "🧒", color: "#10B981", image: "zeze.png", birthday: "06-13" },
-  { id: "whole_family", label: "全家", emoji: "👨‍👩‍👧‍👦", color: "#F59E0B" },
+  { id:"dad", label:"騏騏", emoji:"👨", color:"#3B82F6", birthday:"06-16" },
+  { id:"mom", label:"潔潔", emoji:"👩", color:"#EC4899", birthday:"10-18" },
+  { id:"sister", label:"嫻嫻", emoji:"👧", color:"#8B5CF6", birthday:"10-19" },
+  { id:"brother", label:"澤澤", emoji:"🧒", color:"#10B981", image:"zeze.png", birthday:"06-13" },
+  { id:"whole_family", label:"全家", emoji:"👨‍👩‍👧‍👦", color:"#B96536" }
 ];
 
 const CATEGORIES = [
-  { id: "food", label: "飲食", emoji: "🍱", color: "#F59E0B", subs: ["早餐","午餐","晚餐","飲料","點心","宵夜","酒","水果","保健品","其他"] },
-  { id: "transport", label: "交通", emoji: "🚗", color: "#3B82F6", subs: ["公車","捷運","計程車","停車費","加油","高鐵","汽車","火車","摩托車"] },
-  { id: "entertainment", label: "娛樂", emoji: "🎮", color: "#8B5CF6", subs: ["電影","遊戲","KTV","展覽","運動","訂閱","休閒","旅行","住宿","派對","演唱會"] },
-  { id: "company", label: "公司", emoji: "💼", color: "#6B7280", subs: [] },
-  { id: "shopping", label: "購物", emoji: "🛍️", color: "#EC4899", subs: ["衣服","鞋子","包包","3C","書籍","生活用品","美妝保養","精品","禮物","網購","美容美髮"] },
-  { id: "personal", label: "個人", emoji: "💆", color: "#06B6D4", subs: ["社交","通話費","投資","稅金","保險","捐款","彩券","卡費"] },
-  { id: "medical", label: "醫療", emoji: "🏥", color: "#EF4444", subs: ["掛號費","藥費","醫療用品","打針","住院","手術","健康檢查"] },
-  { id: "family", label: "居家", emoji: "🏠", color: "#F97316", subs: ["房租","網路費","電話費","日常用品","水費","電費","燃料費","洗衣費","修繕費","家具","家電","西螺家"] },
-  { id: "education", label: "學習", emoji: "📚", color: "#10B981", subs: ["學費","補習班","課程","文具","書本"] },
-  { id: "other", label: "其他", emoji: "📌", color: "#9CA3AF", subs: [] },
+  { id:"food", label:"飲食", emoji:"🍱", color:"#B96536", subs:["早餐","午餐","晚餐","飲料","點心","宵夜","酒","水果","保健品","其他"] },
+  { id:"transport", label:"交通", emoji:"🚗", color:"#3B82F6", subs:["公車","捷運","計程車","停車費","加油","高鐵","汽車","火車","摩托車"] },
+  { id:"entertainment", label:"娛樂", emoji:"🎮", color:"#8B5CF6", subs:["電影","遊戲","KTV","展覽","運動","訂閱","休閒","旅行","住宿","派對","演唱會"] },
+  { id:"company", label:"公司", emoji:"💼", color:"#74665B", subs:[] },
+  { id:"shopping", label:"購物", emoji:"🛍️", color:"#EC4899", subs:["衣服","鞋子","包包","3C","書籍","生活用品","美妝保養","精品","禮物","網購","美容美髮"] },
+  { id:"personal", label:"個人", emoji:"💆", color:"#06B6D4", subs:["社交","通話費","投資","稅金","保險","捐款","彩券","卡費"] },
+  { id:"medical", label:"醫療", emoji:"🏥", color:"#EF4444", subs:["掛號費","藥費","醫療用品","打針","住院","手術","健康檢查"] },
+  { id:"family", label:"居家", emoji:"🏠", color:"#F97316", subs:["房租","網路費","電話費","日常用品","水費","電費","燃料費","洗衣費","修繕費","家具","家電","西螺家"] },
+  { id:"education", label:"學習", emoji:"📚", color:"#10B981", subs:["學費","補習班","課程","文具","書本"] },
+  { id:"other", label:"其他", emoji:"📌", color:"#796B61", subs:[] }
 ];
 
-const getCatById = (label) => CATEGORIES.find(c => c.label === label) || CATEGORIES[CATEGORIES.length - 1];
-const cleanDate = (value) => {
+const getCatById = label =>
+  CATEGORIES.find(c => c.label === label) ||
+  CATEGORIES[CATEGORIES.length - 1];
+
+const cleanDate = value => {
   const text = String(value || "");
   if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
   const d = new Date(value);
   if (!Number.isFinite(d.getTime())) return "";
-  return new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone:"Asia/Taipei",
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit"
+  }).format(d);
 };
-const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
-const formatDate = (str) => { const clean = cleanDate(str); const parts = clean.split("-"); return parts.length !== 3 ? clean : `${parts[0]}年${parts[1]}月${parts[2]}日`; };
-const formatMoney = (n) => `$${Number(n).toLocaleString()}`;
 
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
 
+const formatDate = str => {
+  const value = cleanDate(str);
+  const parts = value.split("-");
+  return parts.length !== 3
+    ? value
+    : `${parts[0]}年${parts[1]}月${parts[2]}日`;
+};
 
-// 不執行輸入字串，只接受四則運算、小數及括號。
+const formatMoney = n => `$${Number(n).toLocaleString()}`;
+
+/* 安全計算：不執行輸入字串 */
 function calculateAmount(value) {
-  const text = String(value).replace(/\s/g, '');
-  if (!text || text.length > 120 || /[^0-9.+*/()\-]/.test(text)) throw new Error('算式不正確');
-  let pos = 0;
-  function primary() {
-    if (text[pos] === '+' || text[pos] === '-') { const sign = text[pos++]; return (sign === '-' ? -1 : 1) * primary(); }
-    if (text[pos] === '(') { pos++; const n = add(); if (text[pos++] !== ')') throw new Error('括號不完整'); return n; }
-    const match = text.slice(pos).match(/^(?:\d+(?:\.\d*)?|\.\d+)/);
-    if (!match) throw new Error('算式不完整'); pos += match[0].length; return Number(match[0]);
+  const text = String(value).replace(/\s/g, "");
+  if (!text || text.length > 120 || /[^0-9.+*/()\-]/.test(text)) {
+    throw new Error("算式不正確");
   }
-  function multiply() { let n = primary(); while (text[pos] === '*' || text[pos] === '/') { const op = text[pos++], v = primary(); n = op === '*' ? n * v : n / v; } return n; }
-  function add() { let n = multiply(); while (text[pos] === '+' || text[pos] === '-') { const op = text[pos++], v = multiply(); n = op === '+' ? n + v : n - v; } return n; }
-  const raw = add(), n = Math.round((raw + Number.EPSILON) * 100) / 100;
-  if (pos !== text.length || !Number.isFinite(raw) || n <= 0 || n > 100000000) throw new Error('金額須大於零且不超過一億元');
+
+  let pos = 0;
+
+  function primary() {
+    if (text[pos] === "+" || text[pos] === "-") {
+      const sign = text[pos++];
+      return (sign === "-" ? -1 : 1) * primary();
+    }
+
+    if (text[pos] === "(") {
+      pos++;
+      const n = add();
+      if (text[pos++] !== ")") throw new Error("括號不完整");
+      return n;
+    }
+
+    const match = text.slice(pos).match(/^(?:\d+(?:\.\d*)?|\.\d+)/);
+    if (!match) throw new Error("算式不完整");
+    pos += match[0].length;
+    return Number(match[0]);
+  }
+
+  function multiply() {
+    let n = primary();
+    while (text[pos] === "*" || text[pos] === "/") {
+      const op = text[pos++];
+      const v = primary();
+      n = op === "*" ? n * v : n / v;
+    }
+    return n;
+  }
+
+  function add() {
+    let n = multiply();
+    while (text[pos] === "+" || text[pos] === "-") {
+      const op = text[pos++];
+      const v = multiply();
+      n = op === "+" ? n + v : n - v;
+    }
+    return n;
+  }
+
+  const raw = add();
+  const n = Math.round((raw + Number.EPSILON) * 100) / 100;
+
+  if (
+    pos !== text.length ||
+    !Number.isFinite(raw) ||
+    n <= 0 ||
+    n > 100000000
+  ) {
+    throw new Error("金額須大於零且不超過一億元");
+  }
+
   return n;
 }
+
 const newId = () => crypto.randomUUID();
-const PENDING_KEY = 'family_ledger_v2_pending';
-function loadPending() { try { return JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch (_) { return null; } }
+const PENDING_KEY = "family_ledger_v2_pending";
+
+function loadPending() {
+  try {
+    return JSON.parse(sessionStorage.getItem(PENDING_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
 function enrichRecords(rows) {
-  if (!Array.isArray(rows)) throw new Error('回傳格式不正確');
+  if (!Array.isArray(rows)) throw new Error("回傳格式不正確");
+
   return rows.map(r => {
     const cat = getCatById(r.categoryLabel);
-    const names = String(r.member || '').split(/[、,]/).map(n => n.trim()).filter(Boolean);
+    const names = String(r.member || "")
+      .split(/[、,]/)
+      .map(n => n.trim())
+      .filter(Boolean);
+
     const amount = Number(r.amount);
-    if (!Number.isFinite(amount) || !cleanDate(r.date)) throw new Error('舊帳目含無效日期或金額，請先檢查試算表');
-    return {...r, id:String(r.id), amount, note:String(r.note || ''), date:cleanDate(r.date), category:cat.id, categoryEmoji:cat.emoji, categoryColor:cat.color, memberObjs:names.map(n => MEMBERS.find(m => m.label === n)).filter(Boolean)};
+
+    if (!Number.isFinite(amount) || !cleanDate(r.date)) {
+      throw new Error("舊帳目含無效日期或金額，請先檢查試算表");
+    }
+
+    return {
+      ...r,
+      id:String(r.id),
+      amount,
+      note:String(r.note || ""),
+      date:cleanDate(r.date),
+      category:cat.id,
+      categoryEmoji:cat.emoji,
+      categoryColor:cat.color,
+      memberObjs:names
+        .map(n => MEMBERS.find(m => m.label === n))
+        .filter(Boolean)
+    };
   }).sort((a,b) => b.date.localeCompare(a.date));
 }
+
 async function apiCall(payload) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
+
   try {
-    const response = await fetch(APPS_SCRIPT_URL, {method:'POST', redirect:'follow', credentials:'omit', cache:'no-store', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload), signal:controller.signal});
-    if (!response.ok) throw new Error('連線失敗');
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method:"POST",
+      redirect:"follow",
+      credentials:"omit",
+      cache:"no-store",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(payload),
+      signal:controller.signal
+    });
+
+    if (!response.ok) throw new Error("連線失敗");
+
     const data = await response.json();
-    if (!data || !['ok','error'].includes(data.status)) throw new Error('回傳格式不正確');
-    if (data.status !== 'ok') { const error = new Error(data.message || '操作失敗'); error.code = data.code; throw error; }
+
+    if (!data || !["ok","error"].includes(data.status)) {
+      throw new Error("回傳格式不正確");
+    }
+
+    if (data.status !== "ok") {
+      const error = new Error(data.message || "操作失敗");
+      error.code = data.code;
+      throw error;
+    }
+
     return data;
-  } finally { clearTimeout(timeout); }
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
-// 台灣節慶與繁體農曆顯示
-const lunarMonths = ["", "正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "臘月"];
-const lunarDays = ["", "初一", "初二", "初三", "初四", "初五", "初六", "初七", "初八", "初九", "初十", "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十", "廿一", "廿二", "廿三", "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"];
+/* 台灣節慶與繁體農曆 */
+const lunarMonths = [
+  "", "正月", "二月", "三月", "四月", "五月", "六月",
+  "七月", "八月", "九月", "十月", "十一月", "臘月"
+];
+
+const lunarDays = [
+  "", "初一", "初二", "初三", "初四", "初五", "初六", "初七",
+  "初八", "初九", "初十", "十一", "十二", "十三", "十四", "十五",
+  "十六", "十七", "十八", "十九", "二十", "廿一", "廿二", "廿三",
+  "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"
+];
 
 const twSolarFestivals = {
-  "01-01": "元旦", "02-14": "情人節", "02-28": "和平紀念日", "04-04": "兒童節",
-  "05-01": "勞工節", "08-08": "父親節", "09-28": "教師節", "10-10": "國慶日",
-  "10-31": "萬聖節", "12-25": "聖誕節"
+  "01-01":"元旦",
+  "02-14":"情人節",
+  "02-28":"和平紀念日",
+  "04-04":"兒童節",
+  "05-01":"勞工節",
+  "08-08":"父親節",
+  "09-28":"教師節",
+  "10-10":"國慶日",
+  "10-31":"萬聖節",
+  "12-25":"聖誕節"
 };
 
 const twLunarFestivals = {
-  "01-01": "春節", "01-02": "初二(回娘家)", "01-15": "元宵節", "05-05": "端午節",
-  "07-07": "七夕", "07-15": "中元節", "08-15": "中秋節", "09-09": "重陽節",
-  "12-08": "臘八", "12-24": "送神"
+  "01-01":"春節",
+  "01-02":"初二(回娘家)",
+  "01-15":"元宵節",
+  "05-05":"端午節",
+  "07-07":"七夕",
+  "07-15":"中元節",
+  "08-15":"中秋節",
+  "09-09":"重陽節",
+  "12-08":"臘八",
+  "12-24":"送神"
 };
 
-const getLunarText = (y, m, d) => {
-  if (typeof Solar === 'undefined') return { text: "", festival: "", fullLunar: "" };
+const getLunarText = (y,m,d) => {
+  if (typeof Solar === "undefined") {
+    return {text:"", festival:"", fullLunar:""};
+  }
+
   try {
-    const lunar = Solar.fromYmd(y, m, d).getLunar();
+    const solar = Solar.fromYmd(y,m,d);
+    const lunar = solar.getLunar();
     const isLeap = lunar.getMonth() < 0;
     const lMonth = Math.abs(lunar.getMonth());
     const lDay = lunar.getDay();
-    const solarMd = String(m).padStart(2,'0') + "-" + String(d).padStart(2,'0');
-    const lunarMd = String(lMonth).padStart(2,'0') + "-" + String(lDay).padStart(2,'0');
+
+    const solarMd = String(m).padStart(2,"0") + "-" +
+      String(d).padStart(2,"0");
+
+    const lunarMd = String(lMonth).padStart(2,"0") + "-" +
+      String(lDay).padStart(2,"0");
 
     let text = lunarDays[lDay] || "";
-    if (lDay === 1) text = (isLeap ? "閏" : "") + lunarMonths[lMonth];
+    if (lDay === 1) {
+      text = (isLeap ? "閏" : "") + lunarMonths[lMonth];
+    }
 
-    let festivals = [];
-    if (twSolarFestivals[solarMd]) festivals.push(twSolarFestivals[solarMd]);
-    if (!isLeap && twLunarFestivals[lunarMd]) festivals.push(twLunarFestivals[lunarMd]);
-    
-    // 獨立處理除夕 (因為可能是臘月29或30)
-    if (lunar.getMonth() === 12 && Solar.fromYmd(y, m, d).next(1).getLunar().getMonth() === 1 && Solar.fromYmd(y, m, d).next(1).getLunar().getDay() === 1 && !festivals.includes("除夕")) {
+    const festivals = [];
+
+    if (twSolarFestivals[solarMd]) {
+      festivals.push(twSolarFestivals[solarMd]);
+    }
+
+    if (!isLeap && twLunarFestivals[lunarMd]) {
+      festivals.push(twLunarFestivals[lunarMd]);
+    }
+
+    const nextLunar = solar.next(1).getLunar();
+
+    if (
+      lunar.getMonth() === 12 &&
+      nextLunar.getMonth() === 1 &&
+      nextLunar.getDay() === 1
+    ) {
       festivals.push("除夕");
     }
 
-    // 強制將簡體節氣轉換為繁體
     const jq = lunar.getJieQi();
+
     if (jq) {
-      const jqTrad = jq.replace('惊蛰','驚蟄').replace('谷雨','穀雨').replace('小满','小滿').replace('芒种','芒種').replace('处暑','處暑');
-      festivals.push(jqTrad);
+      festivals.push(
+        jq.replace("惊蛰","驚蟄")
+          .replace("谷雨","穀雨")
+          .replace("小满","小滿")
+          .replace("芒种","芒種")
+          .replace("处暑","處暑")
+      );
     }
 
-    return { 
-      text, 
-      festival: festivals.join("、"), 
-      fullLunar: `農曆 ${isLeap ? "閏" : ""}${lunarMonths[lMonth]}${lunarDays[lDay]}` 
+    return {
+      text,
+      festival:festivals.join("、"),
+      fullLunar:`農曆 ${isLeap ? "閏" : ""}${lunarMonths[lMonth]}${lunarDays[lDay]}`
     };
-  } catch (e) {
-    return { text: "", festival: "", fullLunar: "" };
+  } catch {
+    return {text:"", festival:"", fullLunar:""};
   }
 };
 
-const getDayDetailInfo = (dateStr) => {
+const getDayDetailInfo = dateStr => {
   if (!dateStr) return null;
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const md = dateStr.substring(5);
-  
-  let info = { lunar: "", festival: "", birthday: "" };
-  
-  const lInfo = getLunarText(y, m, d);
-  info.lunar = lInfo.fullLunar;
-  info.festival = lInfo.festival;
-  
-  const bdayMember = MEMBERS.find(mem => mem.birthday === md);
-  if (bdayMember) info.birthday = `${bdayMember.label} 生日快樂！🎂`;
-  
-  return info;
+
+  const [y,m,d] = dateStr.split("-").map(Number);
+  const info = getLunarText(y,m,d);
+  const member = MEMBERS.find(mem => mem.birthday === dateStr.substring(5));
+
+  return {
+    lunar:info.fullLunar,
+    festival:info.festival,
+    birthday:member ? `${member.label} 生日快樂！🎂` : ""
+  };
 };
 
-function Card({ children, style }) { return <div style={{ background:"#fff", borderRadius:16, padding:24, marginBottom:16, boxShadow:"0 1px 8px rgba(0,0,0,0.06)", ...style }}>{children}</div>; }
-function SectionLabel({ children }) { return <div style={{ fontSize:14, fontWeight:900, color:"#9CA3AF", letterSpacing:1.5, marginBottom:12 }}>{children}</div>; }
-
-function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear, setSelMonth }) {
-  const daysInMonth = new Date(selYear, selMonth, 0).getDate();
-  const firstDay = new Date(selYear, selMonth - 1, 1).getDay();
-  const dailyTotals = {};
-  records.forEach(r => { const d = cleanDate(r.date); dailyTotals[d] = (dailyTotals[d] || 0) + r.amount; });
-  const handlePrevMonth = () => { let newY = selYear, newM = selMonth - 1; if (newM === 0) { newY -= 1; newM = 12; } setSelYear(newY); setSelMonth(newM); setDate(`${newY}-${String(newM).padStart(2,'0')}-01`); };
-  const handleNextMonth = () => { let newY = selYear, newM = selMonth + 1; if (newM === 13) { newY += 1; newM = 1; } setSelYear(newY); setSelMonth(newM); setDate(`${newY}-${String(newM).padStart(2,'0')}-01`); };
-  const days = [];
-  for (let i = 0; i < firstDay; i++) days.push(null);
-  for (let i = 1; i <= daysInMonth; i++) days.push(i);
-  const todayStr = today();
+function Card({children,style}) {
   return (
-    <Card style={{ padding: "18px 16px" }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: 16 }}>
-        <button onClick={handlePrevMonth} style={{ width:40, height:40, background:"#F9FAFB", border:"none", borderRadius:12, fontSize: 24, cursor:"pointer", color:"#374151", fontWeight:900 }}>‹</button>
-        <div style={{ fontSize: 22, fontWeight: 900, color:"#1a1a1a", letterSpacing: 2 }}>{selYear}年{selMonth}月</div>
-        <button onClick={handleNextMonth} style={{ width:40, height:40, background:"#F9FAFB", border:"none", borderRadius:12, fontSize: 24, cursor:"pointer", color:"#374151", fontWeight:900 }}>›</button>
+    <div style={{
+      background:"#fff",
+      borderRadius:16,
+      padding:24,
+      marginBottom:16,
+      border:"1px solid #EAE0D5",
+      boxShadow:"0 3px 14px rgba(70,48,28,0.035)",
+      ...style
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function SectionLabel({children}) {
+  return (
+    <div style={{
+      fontSize:14,
+      fontWeight:900,
+      color:"#796B61",
+      letterSpacing:1.5,
+      marginBottom:12
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function CalendarPicker({
+  date,setDate,records,
+  selYear,selMonth,setSelYear,setSelMonth
+}) {
+  const daysInMonth = new Date(selYear,selMonth,0).getDate();
+  const firstDay = new Date(selYear,selMonth-1,1).getDay();
+  const dailyTotals = {};
+
+  records.forEach(r => {
+    const d = cleanDate(r.date);
+    dailyTotals[d] = (dailyTotals[d] || 0) + r.amount;
+  });
+
+  const changeMonth = offset => {
+    const target = new Date(selYear,selMonth-1+offset,1);
+    const y = target.getFullYear();
+    const m = target.getMonth()+1;
+    setSelYear(y);
+    setSelMonth(m);
+    setDate(`${y}-${String(m).padStart(2,"0")}-01`);
+  };
+
+  const days = [];
+  for (let i=0; i<firstDay; i++) days.push(null);
+  for (let i=1; i<=daysInMonth; i++) days.push(i);
+
+  const todayStr = today();
+
+  return (
+    <Card style={{padding:"18px 16px"}}>
+      <div style={{
+        display:"flex",
+        justifyContent:"space-between",
+        alignItems:"center",
+        marginBottom:16
+      }}>
+        <button onClick={() => changeMonth(-1)} style={{
+          width:40,height:40,background:"#FAF7F2",
+          border:"none",borderRadius:12,fontSize:24,
+          cursor:"pointer",color:"#51443B",fontWeight:900
+        }}>‹</button>
+
+        <div style={{
+          fontSize:22,fontWeight:900,
+          color:"#40332D",letterSpacing:2
+        }}>{selYear}年{selMonth}月</div>
+
+        <button onClick={() => changeMonth(1)} style={{
+          width:40,height:40,background:"#FAF7F2",
+          border:"none",borderRadius:12,fontSize:24,
+          cursor:"pointer",color:"#51443B",fontWeight:900
+        }}>›</button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", textAlign: "center", color: "#9CA3AF", fontSize: 14, fontWeight: 900, marginBottom: 12 }}>
-        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+
+      <div style={{
+        display:"grid",
+        gridTemplateColumns:"repeat(7,1fr)",
+        textAlign:"center",
+        color:"#796B61",
+        fontSize:14,
+        fontWeight:900,
+        marginBottom:12
+      }}>
+        {["日","一","二","三","四","五","六"].map(day =>
+          <div key={day}>{day}</div>
+        )}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
-        {days.map((day, idx) => {
+
+      <div style={{
+        display:"grid",
+        gridTemplateColumns:"repeat(7,1fr)",
+        gap:6
+      }}>
+        {days.map((day,idx) => {
           if (!day) return <div key={`empty-${idx}`} />;
-          const currentCellDateStr = `${selYear}-${String(selMonth).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-          const isSelected = date === currentCellDateStr;
-          const isToday = todayStr === currentCellDateStr;
-          const total = dailyTotals[currentCellDateStr] || 0;
-          
-          // 🌟 換成我們純手寫的繁體農曆轉換器
-          const { text: lunarText } = getLunarText(selYear, selMonth, day);
-          
+
+          const cellDate =
+            `${selYear}-${String(selMonth).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+
+          const selected = date === cellDate;
+          const isToday = todayStr === cellDate;
+          const total = dailyTotals[cellDate] || 0;
+          const lunar = getLunarText(selYear,selMonth,day);
+
           return (
-            <div key={day} onClick={() => setDate(currentCellDateStr)}
-              style={{
-                height: 72, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: 14, cursor: "pointer",
-                background: isSelected ? "#F59E0B" : total > 0 ? "#FEE2E2" : "transparent",
-                color: isSelected ? "#fff" : "#1a1a1a", border: isToday && !isSelected ? "2px solid #F59E0B" : "2px solid transparent", transition: "all 0.15s"
-              }}>
-              <div style={{ fontSize: 18, fontWeight: 900, lineHeight: 1.1 }}>{isToday ? "今" : day}</div>
-              {lunarText && <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? "rgba(255,255,255,0.9)" : "#9CA3AF", marginTop: 3 }}>{lunarText}</div>}
-              {total > 0 && <div style={{ fontSize: 11, fontWeight: 900, color: isSelected ? "#FFFBEB" : "#EF4444", marginTop: 3 }}>-{total}</div>}
+            <div key={day} onClick={() => setDate(cellDate)} style={{
+              height:72,
+              display:"flex",
+              flexDirection:"column",
+              alignItems:"center",
+              justifyContent:"center",
+              borderRadius:14,
+              cursor:"pointer",
+              background:selected ? "#B96536" : total > 0 ? "#FEE2E2" : "transparent",
+              color:selected ? "#fff" : "#40332D",
+              border:isToday && !selected
+                ? "2px solid #B96536"
+                : "2px solid transparent",
+              transition:"all 0.15s"
+            }}>
+              <div style={{
+                fontSize:18,fontWeight:900,lineHeight:1.1
+              }}>{isToday ? "今" : day}</div>
+
+              {lunar.text && (
+                <div style={{
+                  fontSize:11,fontWeight:700,
+                  color:selected ? "rgba(255,255,255,0.9)" : "#796B61",
+                  marginTop:3
+                }}>{lunar.text}</div>
+              )}
+
+              {total > 0 && (
+                <div style={{
+                  fontSize:11,fontWeight:900,
+                  color:selected ? "#FFF5E8" : "#EF4444",
+                  marginTop:3
+                }}>-{total}</div>
+              )}
             </div>
           );
         })}
@@ -248,371 +704,1383 @@ function CalendarPicker({ date, setDate, records, selYear, selMonth, setSelYear,
 }
 
 function App() {
-  const [tab, setTab] = useState(0);
-  const [records, setRecords] = useState([]);
-  const [prevRecords, setPrevRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selYear, setSelYear] = useState(new Date().getFullYear());
-  const [selMonth, setSelMonth] = useState(new Date().getMonth() + 1);
-  const [date, setDate] = useState(today());
-  const [selectedMembers, setSelectedMembers] = useState([]);
-  const [category, setCategory] = useState(null);
-  const [subCategory, setSubCategory] = useState(null);
-  const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
-  const [toast, setToast] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [tab,setTab] = useState(0);
+  const [records,setRecords] = useState([]);
+  const [prevRecords,setPrevRecords] = useState([]);
+  const [loading,setLoading] = useState(true);
 
-  const showToast = useCallback((msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }, []);
-  
-  const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState(loadPending);
-  const [syncMessage, setSyncMessage] = useState('');
-  const [readError, setReadError] = useState('');
-  const [prevAvailable, setPrevAvailable] = useState(false);
+  const [selYear,setSelYear] = useState(new Date().getFullYear());
+  const [selMonth,setSelMonth] = useState(new Date().getMonth()+1);
+  const [date,setDate] = useState(today());
+
+  const [selectedMembers,setSelectedMembers] = useState([]);
+  const [category,setCategory] = useState(null);
+  const [subCategory,setSubCategory] = useState(null);
+  const [amount,setAmount] = useState("");
+  const [note,setNote] = useState("");
+  const [toast,setToast] = useState(null);
+  const [searchQuery,setSearchQuery] = useState("");
+
+  const [busy,setBusy] = useState(false);
+  const [pending,setPending] = useState(loadPending);
+  const [syncMessage,setSyncMessage] = useState("");
+  const [readError,setReadError] = useState("");
+  const [lastUpdated,setLastUpdated] = useState(null);
+  const [prevAvailable,setPrevAvailable] = useState(false);
+
   const mutationLock = useRef(false);
   const pendingRef = useRef(pending);
   const fetchSequence = useRef(0);
-  const viewRef = useRef({year:selYear, month:selMonth});
-  viewRef.current = {year:selYear, month:selMonth};
+  const viewRef = useRef({year:selYear,month:selMonth});
+  viewRef.current = {year:selYear,month:selMonth};
+
+  const showToast = useCallback((msg,type="success") => {
+    setToast({msg,type});
+    setTimeout(() => setToast(null),3000);
+  },[]);
 
   useEffect(() => {
-    // 移除舊版留在此網站的帳目快取，不動其他應用程式資料。
-    try { localStorage.removeItem('family_ledger_access_key'); Object.keys(localStorage).filter(k => /^cache_\d{4}_\d{2}$/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (_) {}
-    const preventLeave = e => { if (mutationLock.current || pendingRef.current) { e.preventDefault(); e.returnValue = ''; } };
-    window.addEventListener('beforeunload', preventLeave);
-    return () => window.removeEventListener('beforeunload', preventLeave);
-  }, []);
+    try {
+      localStorage.removeItem("family_ledger_access_key");
 
-  const fetchRecords = useCallback(async (year, month) => {
+      Object.keys(localStorage)
+        .filter(k => /^cache_\d{4}_\d{2}$/.test(k))
+        .forEach(k => localStorage.removeItem(k));
+    } catch {}
+
+    const preventLeave = e => {
+      if (mutationLock.current || pendingRef.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload",preventLeave);
+    return () => window.removeEventListener("beforeunload",preventLeave);
+  },[]);
+
+  const fetchRecords = useCallback(async (year,month) => {
     const sequence = ++fetchSequence.current;
-    setLoading(true); setReadError(''); setRecords([]); setPrevRecords([]); setPrevAvailable(false);
-    const current = `${year}_${String(month).padStart(2,'0')}`;
-    const pm = month === 1 ? 12 : month - 1, py = month === 1 ? year - 1 : year;
-    const previous = `${py}_${String(pm).padStart(2,'0')}`;
+
+    setLoading(true);
+    setReadError("");
+    setLastUpdated(null);
+    setRecords([]);
+    setPrevRecords([]);
+    setPrevAvailable(false);
+
+    const current = `${year}_${String(month).padStart(2,"0")}`;
+    const pm = month === 1 ? 12 : month-1;
+    const py = month === 1 ? year-1 : year;
+    const previous = `${py}_${String(pm).padStart(2,"0")}`;
+
     await Promise.all([
-      apiCall({action:'read',month:current}).then(data => {
-        if (sequence === fetchSequence.current) setRecords(enrichRecords(data.records));
-      }).catch(error => { if (sequence === fetchSequence.current) setReadError(error.message || '讀取失敗，請重新整理'); })
-      .finally(() => { if (sequence === fetchSequence.current) setLoading(false); }),
-      apiCall({action:'read',month:previous}).then(data => {
-        if (sequence === fetchSequence.current) { setPrevRecords(enrichRecords(data.records)); setPrevAvailable(true); }
-      }).catch(() => {})
+      apiCall({action:"read",month:current})
+        .then(data => {
+          if (sequence === fetchSequence.current) {
+            setRecords(enrichRecords(data.records));
+            setLastUpdated(new Date());
+          }
+        })
+        .catch(error => {
+          if (sequence === fetchSequence.current) {
+            setReadError(error.message || "讀取失敗，請重新整理");
+          }
+        })
+        .finally(() => {
+          if (sequence === fetchSequence.current) {
+            setLoading(false);
+          }
+        }),
+
+      apiCall({action:"read",month:previous})
+        .then(data => {
+          if (sequence === fetchSequence.current) {
+            setPrevRecords(enrichRecords(data.records));
+            setPrevAvailable(true);
+          }
+        })
+        .catch(() => {})
     ]);
-  }, []);
-  useEffect(() => { fetchRecords(selYear, selMonth); return () => { fetchSequence.current++; }; }, [selYear, selMonth, fetchRecords]);
-  useEffect(() => { if (date) { const [y,m] = date.split('-'); setSelYear(Number(y)); setSelMonth(Number(m)); } }, [date]);
+  },[]);
+
+  useEffect(() => {
+    fetchRecords(selYear,selMonth);
+    return () => { fetchSequence.current++; };
+  },[selYear,selMonth,fetchRecords]);
+
+  useEffect(() => {
+    if (date) {
+      const [y,m] = date.split("-");
+      setSelYear(Number(y));
+      setSelMonth(Number(m));
+    }
+  },[date]);
 
   function rememberPending(value) {
-    // 必須先成功保存原請求才可送出；重整後沿用相同 ID。
-    if (value) sessionStorage.setItem(PENDING_KEY, JSON.stringify(value));
-    else sessionStorage.removeItem(PENDING_KEY);
-    pendingRef.current = value; setPending(value);
+    if (value) {
+      sessionStorage.setItem(PENDING_KEY,JSON.stringify(value));
+    } else {
+      sessionStorage.removeItem(PENDING_KEY);
+    }
+
+    pendingRef.current = value;
+    setPending(value);
   }
-  async function runMutation(payload, retry = false) {
-    if (mutationLock.current || (!retry && pendingRef.current)) return false;
-    mutationLock.current = true; setBusy(true); setSyncMessage('正在儲存，請稍候…');
+
+  async function runMutation(payload,retry=false) {
+    if (mutationLock.current || (!retry && pendingRef.current)) {
+      return false;
+    }
+
+    mutationLock.current = true;
+    setBusy(true);
+    setSyncMessage("正在儲存，請稍候…");
+
     try {
       rememberPending(payload);
-      fetchSequence.current++; // 作廢任何寫入前開始的讀取。
+      fetchSequence.current++;
+      setLastUpdated(null);
+
       await apiCall(payload);
       rememberPending(null);
-      if (payload.action === 'write') { setSelectedMembers([]); setCategory(null); setSubCategory(null); setAmount(''); setNote(''); }
-      setSyncMessage(payload.action === 'delete' ? '已刪除這筆帳目。' : '已確認儲存成功。');
-      showToast(payload.action === 'delete' ? '🗑 已刪除' : '✅ 已儲存');
+
+      if (payload.action === "write") {
+        setSelectedMembers([]);
+        setCategory(null);
+        setSubCategory(null);
+        setAmount("");
+        setNote("");
+      }
+
+      setSyncMessage(
+        payload.action === "delete"
+          ? "已刪除這筆帳目。"
+          : "已確認儲存成功。"
+      );
+
+      showToast(
+        payload.action === "delete" ? "🗑 已刪除" : "✅ 已儲存"
+      );
+
       return true;
     } catch (error) {
-      if (!pendingRef.current) { setSyncMessage('瀏覽器無法保留待確認操作，因此尚未送出。請確認瀏覽器允許此網站使用儲存空間。'); return false; }
-      const definitive = ['VALIDATION','CONFLICT','DUPLICATE_ID','NOT_FOUND','SCHEMA'];
-      if (definitive.includes(error.code)) {
-        rememberPending(null); setSyncMessage(error.message + ' 請確認最新帳目後再操作。');
-      } else {
-        setSyncMessage('尚未確認儲存結果。請按「重試原操作」，不要重新新增相同帳目。');
+      if (!pendingRef.current) {
+        setSyncMessage(
+          "瀏覽器無法保留待確認操作，因此尚未送出。請確認瀏覽器允許此網站使用儲存空間。"
+        );
+        return false;
       }
+
+      const definitive = [
+        "VALIDATION","CONFLICT","DUPLICATE_ID","NOT_FOUND","SCHEMA"
+      ];
+
+      if (definitive.includes(error.code)) {
+        rememberPending(null);
+        setSyncMessage(error.message + " 請確認最新帳目後再操作。");
+      } else {
+        setSyncMessage(
+          "尚未確認儲存結果。請按「重試原操作」，不要重新新增相同帳目。"
+        );
+      }
+
       return false;
     } finally {
-      mutationLock.current = false; setBusy(false);
-      const view = viewRef.current; fetchRecords(view.year, view.month);
+      mutationLock.current = false;
+      setBusy(false);
+
+      const view = viewRef.current;
+      fetchRecords(view.year,view.month);
     }
   }
 
-  const toggleMember = (m) => {
+  const toggleMember = m => {
     setSelectedMembers(prev => {
       if (m.id === "whole_family") return [m];
+
       const filtered = prev.filter(p => p.id !== "whole_family");
-      if (prev.some(p => p.id === m.id)) { return filtered.filter(p => p.id !== m.id); } 
-      else { return [...filtered, m]; }
+
+      return prev.some(p => p.id === m.id)
+        ? filtered.filter(p => p.id !== m.id)
+        : [...filtered,m];
     });
   };
 
   const handleSubmit = async () => {
     if (mutationLock.current || pendingRef.current) return;
-    if (!selectedMembers.length || !category || !amount) return showToast('資料不完整哦', 'error');
+
+    if (!selectedMembers.length || !category || !amount) {
+      return showToast("資料不完整哦","error");
+    }
+
     try {
       const value = calculateAmount(amount);
-      if (note.length > 1000) throw new Error('備註最多 1,000 字');
-      await runMutation({action:'write', id:newId(), requestId:newId(), date, member:selectedMembers.map(m => m.label).join('、'), categoryLabel:category.label, subCategory:subCategory || '', amount:value, note});
-    } catch (error) { showToast(error.message, 'error'); }
-  };
-  const handleDelete = async (id, rDate) => {
-    const record = records.find(r => r.id === id);
-    if (!record || record.duplicateId) return showToast('這筆帳目需先確認重複 ID', 'error');
-    return runMutation({action:'delete', id:String(id), requestId:newId(), date:rDate, expectedVersion:record.version || 0});
-  };
-  const handleUpdate = async (record, nAmt, nNote) => {
-    if (record.duplicateId) return showToast('這筆帳目需先確認重複 ID', 'error');
-    try { return await runMutation({action:'update', id:String(record.id), requestId:newId(), date:record.date, expectedVersion:record.version || 0, amount:calculateAmount(nAmt), note:nNote}); }
-    catch (error) { showToast(error.message,'error'); return false; }
+
+      if (note.length > 1000) {
+        throw new Error("備註最多 1,000 字");
+      }
+
+      await runMutation({
+        action:"write",
+        id:newId(),
+        requestId:newId(),
+        date,
+        member:selectedMembers.map(m => m.label).join("、"),
+        categoryLabel:category.label,
+        subCategory:subCategory || "",
+        amount:value,
+        note
+      });
+    } catch (error) {
+      showToast(error.message,"error");
+    }
   };
 
-  const handleDuplicate = (r) => {
-    const cat = CATEGORIES.find(c => c.id === r.category);
-    setCategory(cat);
+  const handleDelete = async (id,rDate) => {
+    const record = records.find(r => r.id === id);
+
+    if (!record || record.duplicateId) {
+      return showToast("這筆帳目需先確認重複 ID","error");
+    }
+
+    return runMutation({
+      action:"delete",
+      id:String(id),
+      requestId:newId(),
+      date:rDate,
+      expectedVersion:record.version || 0
+    });
+  };
+
+  const handleUpdate = async (record,nAmt,nNote) => {
+    if (record.duplicateId) {
+      return showToast("這筆帳目需先確認重複 ID","error");
+    }
+
+    try {
+      return await runMutation({
+        action:"update",
+        id:String(record.id),
+        requestId:newId(),
+        date:record.date,
+        expectedVersion:record.version || 0,
+        amount:calculateAmount(nAmt),
+        note:nNote
+      });
+    } catch (error) {
+      showToast(error.message,"error");
+      return false;
+    }
+  };
+
+  const handleDuplicate = r => {
+    setCategory(CATEGORIES.find(c => c.id === r.category));
     setSubCategory(r.subCategory);
     setAmount(String(r.amount));
-    setNote(r.note ? r.note.replace(/^'/, '') : ""); 
+    setNote(r.note ? r.note.replace(/^'/,"") : "");
     setSelectedMembers(r.memberObjs || []);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    window.scrollTo({top:0,behavior:"smooth"});
     showToast("💡 已複製內容，可直接修改或新增");
   };
 
-  const selectedDateTotal = records.filter(r => cleanDate(r.date) === date).reduce((s, r) => s + r.amount, 0);
+  const selectedDateTotal = records
+    .filter(r => cleanDate(r.date) === date)
+    .reduce((sum,r) => sum+r.amount,0);
 
   return (
-    <div style={{ fontFamily:"'Noto Sans TC',sans-serif", minHeight:"100vh", background:"#F8F7F4" }}>
-      {toast && <div style={{ position:"fixed", top:20, left:"50%", transform:"translateX(-50%)", background: toast.type === "error" ? "#EF4444" : "#1a1a1a", color:"#fff", padding:"12px 28px", borderRadius:99, zIndex:9999, fontSize:16, fontWeight:700, boxShadow:"0 4px 24px rgba(0,0,0,0.18)", animation:"fadeIn 0.2s ease", whiteSpace:"nowrap", maxWidth:"90vw" }}>{toast.msg}</div>}
-      <div style={{ background:"#1a1a1a", padding:"20px 20px 0", position:"sticky", top:0, zIndex:100 }}>
-        <div style={{ maxWidth:480, margin:"0 auto" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <div><div style={{ color:"#F59E0B", fontSize:13, fontWeight:700, letterSpacing:3, textTransform:"uppercase" }}>家庭共享</div><div style={{ color:"#fff", fontSize:26, fontWeight:900, marginTop:2 }}>記帳本</div></div>
-              <button disabled={busy} onClick={() => fetchRecords(selYear, selMonth)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", padding:5, opacity:0.8 }}aria-label="重新讀取帳目">🔄</button>
-              {tab === 0 && <div style={{ marginLeft: 4, padding: "6px 12px", background: "#333", borderRadius: 12, border: "1px solid #444", animation: "fadeIn 0.3s ease" }}><div style={{ color: "#9CA3AF", fontSize: 12, fontWeight: 700, marginBottom: 2 }}>本日總計</div><div style={{ color: "#F59E0B", fontSize: 18, fontWeight: 900 }}>{formatMoney(selectedDateTotal)}</div></div>}
+    <div style={{
+      fontFamily:"'Noto Sans TC',sans-serif",
+      minHeight:"100vh",
+      background:"#F7F3EE"
+    }}>
+      {toast && (
+        <div style={{
+          position:"fixed",top:20,left:"50%",
+          transform:"translateX(-50%)",
+          background:toast.type === "error" ? "#EF4444" : "#40332D",
+          color:"#fff",padding:"12px 24px",borderRadius:99,
+          zIndex:10000,fontSize:16,fontWeight:700,
+          boxShadow:"0 4px 24px rgba(0,0,0,0.18)",
+          animation:"fadeIn 0.2s ease",
+          maxWidth:"90vw",textAlign:"center"
+        }}>{toast.msg}</div>
+      )}
+
+      <div style={{
+        background:"#40332D",
+        padding:"20px 20px 0",
+        position:"sticky",top:0,zIndex:100
+      }}>
+        <div style={{maxWidth:480,margin:"0 auto"}}>
+          <div style={{
+            display:"flex",justifyContent:"space-between",
+            alignItems:"center",marginBottom:18,gap:8
+          }}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div>
+                <div style={{
+                  color:"#F2BD8D",fontSize:13,
+                  fontWeight:700,letterSpacing:3
+                }}>家庭共享</div>
+                <div style={{
+                  color:"#fff",fontSize:26,
+                  fontWeight:900,marginTop:2
+                }}>記帳本</div>
+              </div>
+
+              <button
+                disabled={busy}
+                onClick={() => fetchRecords(selYear,selMonth)}
+                aria-label="重新讀取帳目"
+                style={{
+                  background:"none",border:"none",
+                  fontSize:24,cursor:"pointer",padding:5,opacity:0.8
+                }}
+              >🔄</button>
+
+              {tab === 0 && (
+                <div style={{
+                  marginLeft:4,padding:"6px 12px",
+                  background:"#514036",borderRadius:12,
+                  border:"1px solid #6C5141",
+                  animation:"veilIn 0.3s ease"
+                }}>
+                  <div style={{
+                    color:"#D8C9BD",fontSize:12,
+                    fontWeight:700,marginBottom:2
+                  }}>本日總計</div>
+                  <div style={{
+                    color:"#F2BD8D",fontSize:18,fontWeight:900
+                  }}>{formatMoney(selectedDateTotal)}</div>
+                </div>
+              )}
             </div>
-            <div style={{ textAlign:"right" }}><div style={{ color:"#9CA3AF", fontSize:13, fontWeight:600 }}>{selMonth}月總計</div><div style={{ color:"#F59E0B", fontSize:24, fontWeight:900 }}>{loading || readError ? "—" : formatMoney(records.reduce((s, r) => s + r.amount, 0))}</div></div>
+
+            <div style={{textAlign:"right"}}>
+              <div style={{
+                color:"#D8C9BD",fontSize:13,fontWeight:600
+              }}>{selMonth}月總計</div>
+              <div style={{
+                color:"#F2BD8D",fontSize:24,fontWeight:900
+              }}>
+                {loading || readError
+                  ? "—"
+                  : formatMoney(records.reduce((sum,r) => sum+r.amount,0))}
+              </div>
+            </div>
           </div>
-          <div style={{ display:"flex", gap:4 }}>{["記帳","報表"].map((t,i) => (<button key={t} onClick={() => setTab(i)} style={{ flex:1, padding:"12px 0", border:"none", background:"transparent", color: tab===i ? "#F59E0B" : "#6B7280", fontWeight:700, fontSize:18, cursor:"pointer", borderBottom:`4px solid ${tab===i ? "#F59E0B" : "transparent"}`, transition:"all 0.2s" }}>{t}</button>))}</div>
+
+          <div style={{display:"flex",gap:4}}>
+            {["記帳","報表"].map((label,i) => (
+              <button key={label} onClick={() => setTab(i)} style={{
+                flex:1,padding:"12px 0",border:"none",
+                background:"transparent",
+                color:tab === i ? "#F2BD8D" : "#D8C9BD",
+                fontWeight:700,fontSize:18,cursor:"pointer",
+                borderBottom:`4px solid ${tab === i ? "#F2BD8D" : "transparent"}`,
+                transition:"all 0.2s"
+              }}>{label}</button>
+            ))}
+          </div>
         </div>
       </div>
-      <div style={{ maxWidth:480, margin:"0 auto", padding:"20px 16px 80px" }}>
-        {syncMessage && <div role="status" style={{padding:14,marginBottom:14,background:'#FFFBEB',borderRadius:12,lineHeight:1.7}}>{syncMessage}</div>}
-        {pending && <div style={{padding:14,marginBottom:14,background:'#FEF3C7',borderRadius:12}}><p>待確認：{pending.date}・{pending.action === 'write' ? '新增' : pending.action === 'update' ? '修改' : '刪除'}{pending.amount ? `・${formatMoney(pending.amount)}` : ''}</p><button disabled={busy} onClick={() => runMutation(pendingRef.current, true)} style={{padding:12,marginTop:8}}>{busy ? '確認中…' : '重試原操作'}</button><p style={{fontSize:12,marginTop:8}}>請先完成確認，再新增、修改或刪除其他帳目。</p></div>}
-        {readError && <p role="alert" style={{padding:14,color:'#B91C1C'}}>讀取未完成：{readError}。目前畫面不代表完整帳目。</p>}
-        {records.some(r => r.duplicateId) && <p role="alert" style={{padding:14,color:'#B91C1C'}}>發現舊資料有重複 ID，已暫停這些帳目的修改與刪除，請先在試算表確認。</p>}
-        <fieldset disabled={busy || !!pending} style={{border:0,minWidth:0,padding:0,pointerEvents:busy || pending ? "none" : "auto",opacity:busy ? 0.7 : 1}}>
-        {readError ? <p style={{padding:20}}>請按上方重新讀取，確認帳目載入完成後再操作。</p> : tab === 0 ? <FormView date={date} setDate={setDate} selectedMembers={selectedMembers} onMemberToggle={toggleMember} category={category} onCategorySelect={c => {setCategory(c); setSubCategory(null);}} subCategory={subCategory} setSubCategory={setSubCategory} amount={amount} setAmount={setAmount} note={note} setNote={setNote} busy={busy} onSubmit={handleSubmit} records={records} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} onDelete={handleDelete} onUpdate={handleUpdate} onDuplicate={handleDuplicate} loading={loading} searchQuery={searchQuery} setSearchQuery={setSearchQuery} /> : <DashboardView prevAvailable={prevAvailable} records={records} prevRecords={prevRecords} loading={loading} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} />}
+
+      <div style={{
+        maxWidth:480,margin:"0 auto",padding:"20px 16px 80px"
+      }}>
+        <div className="sync-time" role="status">
+          {busy
+            ? "正在儲存…"
+            : loading
+              ? "本月資料更新中…"
+              : readError
+                ? "本月資料更新失敗，請重新讀取。"
+                : lastUpdated
+                  ? `本月最後更新：${lastUpdated.toLocaleString("zh-TW",{
+                      timeZone:"Asia/Taipei",
+                      month:"2-digit",day:"2-digit",
+                      hour:"2-digit",minute:"2-digit",second:"2-digit",
+                      hour12:false
+                    })}`
+                  : "等待更新本月資料…"}
+        </div>
+
+        {syncMessage && (
+          <div role="status" style={{
+            padding:14,marginBottom:14,
+            background:"#FFF5E8",borderRadius:12,lineHeight:1.7
+          }}>{syncMessage}</div>
+        )}
+
+        {pending && (
+          <div style={{
+            padding:14,marginBottom:14,
+            background:"#FAE6CF",borderRadius:12
+          }}>
+            <p>
+              待確認：{pending.date}・
+              {pending.action === "write"
+                ? "新增"
+                : pending.action === "update" ? "修改" : "刪除"}
+              {pending.amount ? `・${formatMoney(pending.amount)}` : ""}
+            </p>
+
+            <button
+              disabled={busy}
+              onClick={() => runMutation(pendingRef.current,true)}
+              style={{padding:12,marginTop:8}}
+            >{busy ? "確認中…" : "重試原操作"}</button>
+
+            <p style={{fontSize:12,marginTop:8}}>
+              請先完成確認，再新增、修改或刪除其他帳目。
+            </p>
+          </div>
+        )}
+
+        {readError && (
+          <p role="alert" style={{padding:14,color:"#B91C1C"}}>
+            讀取未完成：{readError}。目前畫面不代表完整帳目。
+          </p>
+        )}
+
+        {records.some(r => r.duplicateId) && (
+          <p role="alert" style={{padding:14,color:"#B91C1C"}}>
+            發現舊資料有重複 ID，已暫停這些帳目的修改與刪除，請先在試算表確認。
+          </p>
+        )}
+
+        <fieldset
+          disabled={busy || !!pending}
+          style={{
+            border:0,minWidth:0,padding:0,
+            pointerEvents:busy || pending ? "none" : "auto",
+            opacity:busy ? 0.7 : 1
+          }}
+        >
+          {readError ? (
+            <p style={{padding:20}}>
+              請按上方重新讀取，確認帳目載入完成後再操作。
+            </p>
+          ) : tab === 0 ? (
+            <FormView
+              date={date}
+              setDate={setDate}
+              selectedMembers={selectedMembers}
+              onMemberToggle={toggleMember}
+              category={category}
+              onCategorySelect={c => {
+                setCategory(c);
+                setSubCategory(null);
+              }}
+              subCategory={subCategory}
+              setSubCategory={setSubCategory}
+              amount={amount}
+              setAmount={setAmount}
+              note={note}
+              setNote={setNote}
+              busy={busy}
+              onSubmit={handleSubmit}
+              records={records}
+              selYear={selYear}
+              setSelYear={setSelYear}
+              selMonth={selMonth}
+              setSelMonth={setSelMonth}
+              onDelete={handleDelete}
+              onUpdate={handleUpdate}
+              onDuplicate={handleDuplicate}
+              loading={loading}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+            />
+          ) : (
+            <DashboardView
+              prevAvailable={prevAvailable}
+              records={records}
+              prevRecords={prevRecords}
+              loading={loading}
+              selYear={selYear}
+              setSelYear={setSelYear}
+              selMonth={selMonth}
+              setSelMonth={setSelMonth}
+            />
+          )}
         </fieldset>
       </div>
     </div>
   );
 }
 
-function FormView({ busy, date, setDate, selectedMembers, onMemberToggle, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, records, selYear, setSelYear, selMonth, setSelMonth, onDelete, onUpdate, onDuplicate, loading, searchQuery, setSearchQuery }) {
+function FormView({
+  busy,date,setDate,selectedMembers,onMemberToggle,
+  category,onCategorySelect,subCategory,setSubCategory,
+  amount,setAmount,note,setNote,onSubmit,records,
+  selYear,setSelYear,selMonth,setSelMonth,
+  onDelete,onUpdate,onDuplicate,loading,
+  searchQuery,setSearchQuery
+}) {
   const catObj = CATEGORIES.find(c => c.id === category?.id);
-  const [confirmId, setConfirmId] = useState(null);
-  const [editId, setEditId] = useState(null);
-  const [editAmt, setEditAmt] = useState("");
-  const [editNote, setEditNote] = useState("");
-  const [showKeypad, setShowKeypad] = useState(false);
+  const [confirmId,setConfirmId] = useState(null);
+  const [editId,setEditId] = useState(null);
+  const [editAmt,setEditAmt] = useState("");
+  const [editNote,setEditNote] = useState("");
+  const [showKeypad,setShowKeypad] = useState(false);
   const keypadRef = useRef(null);
-  
   const dayInfo = getDayDetailInfo(date);
 
-  useEffect(() => { if (showKeypad && keypadRef.current) setTimeout(() => keypadRef.current.scrollIntoView({ behavior: "smooth", block: "end" }), 150); }, [showKeypad]);
+  useEffect(() => {
+    if (showKeypad && keypadRef.current) {
+      const timer = setTimeout(() => {
+        keypadRef.current?.scrollIntoView({
+          behavior:"smooth",block:"end"
+        });
+      },150);
+      return () => clearTimeout(timer);
+    }
+  },[showKeypad]);
 
-  const displayRecords = searchQuery.trim() 
-    ? records.filter(r => 
-        (r.note || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-        r.categoryLabel.includes(searchQuery) || 
-        (r.subCategory || "").includes(searchQuery) || 
+  const displayRecords = searchQuery.trim()
+    ? records.filter(r =>
+        (r.note || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.categoryLabel.includes(searchQuery) ||
+        (r.subCategory || "").includes(searchQuery) ||
         String(r.member).includes(searchQuery)
       )
     : records.filter(r => cleanDate(r.date) === date);
 
+  const keypad = [
+    {l:"7",v:"7"}, {l:"8",v:"8"}, {l:"9",v:"9"},
+    {l:"⌫",v:"BACK",bg:"#FEE2E2",c:"#EF4444"},
+    {l:"4",v:"4"}, {l:"5",v:"5"}, {l:"6",v:"6"},
+    {l:"＋",v:"+",bg:"#FAE6CF",c:"#B96536"},
+    {l:"1",v:"1"}, {l:"2",v:"2"}, {l:"3",v:"3"},
+    {l:"－",v:"-",bg:"#FAE6CF",c:"#B96536"},
+    {l:"C",v:"CLEAR",bg:"#F0E9E1",c:"#74665B"},
+    {l:"0",v:"0"},
+    {l:"×",v:"*",bg:"#FAE6CF",c:"#B96536"},
+    {l:"÷",v:"/",bg:"#FAE6CF",c:"#B96536"}
+  ];
+
   return (
     <>
-      <CalendarPicker date={date} setDate={setDate} records={records} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} />
-      
-      {/* 🌟 情報區更新：乾淨的排版 */}
-      <div style={{ background: "#FFFBEB", borderRadius: 16, padding: "12px 20px", marginBottom: 16, border: "1px solid #FEF3C7", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, animation: "slideUp 0.3s ease" }}>
-        <span style={{ fontSize: 16 }}>📅</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
-            <span style={{ fontSize: 15, fontWeight: 900, color: "#92400E" }}>{dayInfo?.lunar}</span>
-            {dayInfo?.festival && <span style={{ fontSize: 13, fontWeight: 700, color: "#D97706" }}>{dayInfo.festival}</span>}
+      <CalendarPicker
+        date={date}
+        setDate={setDate}
+        records={records}
+        selYear={selYear}
+        setSelYear={setSelYear}
+        selMonth={selMonth}
+        setSelMonth={setSelMonth}
+      />
+
+      <div style={{
+        background:"#FFF5E8",borderRadius:16,
+        padding:"12px 20px",marginBottom:16,
+        border:"1px solid #FAE6CF",
+        display:"flex",flexWrap:"wrap",alignItems:"center",
+        gap:8,animation:"slideUp 0.3s ease"
+      }}>
+        <span style={{fontSize:16}}>📅</span>
+        <div style={{flex:1}}>
+          <div style={{
+            display:"flex",gap:10,alignItems:"baseline",flexWrap:"wrap"
+          }}>
+            <span style={{
+              fontSize:15,fontWeight:900,color:"#75452D"
+            }}>{dayInfo?.lunar}</span>
+
+            {dayInfo?.festival && (
+              <span style={{
+                fontSize:13,fontWeight:700,color:"#A65C31"
+              }}>{dayInfo.festival}</span>
+            )}
           </div>
+
           {dayInfo?.birthday && (
-            <div style={{ marginTop: 4, color: "#EF4444", fontSize: 15, fontWeight: 900, animation: "fadeIn 0.5s ease" }}>
-              🎂 {dayInfo.birthday}
-            </div>
+            <div style={{
+              marginTop:4,color:"#EF4444",
+              fontSize:15,fontWeight:900,
+              animation:"veilIn 0.5s ease"
+            }}>🎂 {dayInfo.birthday}</div>
           )}
         </div>
       </div>
 
       <Card>
         <SectionLabel>👤 成員 (可複選)</SectionLabel>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8 }}>
+
+        <div style={{
+          display:"grid",
+          gridTemplateColumns:"repeat(5,1fr)",
+          gap:8
+        }}>
           {MEMBERS.map(m => {
-            const isSelected = selectedMembers.some(p => p.id === m.id);
+            const selected = selectedMembers.some(p => p.id === m.id);
+
             return (
-              <button key={m.id} onClick={() => onMemberToggle(m)} style={{ padding:"14px 4px", border:`2px solid ${isSelected ? m.color : "#F3F4F6"}`, borderRadius:14, background: isSelected ? m.color+"18" : "#F9FAFB", cursor:"pointer", textAlign:"center", transition:"all 0.15s" }}>
+              <button
+                key={m.id}
+                onClick={() => onMemberToggle(m)}
+                style={{
+                  padding:"14px 4px",
+                  border:`2px solid ${selected ? m.color : "#F0E9E1"}`,
+                  borderRadius:14,
+                  background:selected ? m.color+"18" : "#FAF7F2",
+                  cursor:"pointer",textAlign:"center",
+                  transition:"all 0.15s"
+                }}
+              >
                 {m.image ? (
-                  <img src={m.image} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", margin: "0 auto", display: "block", filter: isSelected ? "none" : "grayscale(1) opacity(0.5)" }} />
+                  <img src={m.image} alt={m.label} style={{
+                    width:32,height:32,borderRadius:"50%",
+                    objectFit:"cover",margin:"0 auto",display:"block",
+                    filter:selected ? "none" : "grayscale(1) opacity(0.5)"
+                  }} />
                 ) : (
-                  <div style={{ fontSize:28, filter: isSelected ? "none" : "grayscale(1) opacity(0.5)" }}>{m.emoji}</div>
+                  <div style={{
+                    fontSize:28,
+                    filter:selected ? "none" : "grayscale(1) opacity(0.5)"
+                  }}>{m.emoji}</div>
                 )}
-                <div style={{ fontSize:15, fontWeight:700, color: isSelected ? m.color : "#9CA3AF", marginTop:6 }}>{m.label}</div>
+
+                <div style={{
+                  fontSize:15,fontWeight:700,
+                  color:selected ? m.color : "#796B61",
+                  marginTop:6
+                }}>{m.label}</div>
               </button>
             );
           })}
         </div>
       </Card>
-      
+
       <Card>
         <SectionLabel>🗂 主類別</SectionLabel>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6 }}>{CATEGORIES.map(cat => (<button key={cat.id} onClick={() => onCategorySelect(cat)} style={{ padding:"12px 4px", border:`2px solid ${category?.id===cat.id ? cat.color : "#F3F4F6"}`, borderRadius:14, background: category?.id===cat.id ? cat.color+"18" : "#F9FAFB", cursor:"pointer", textAlign:"center", transition:"all 0.15s" }}><div style={{ fontSize:26 }}>{cat.emoji}</div><div style={{ fontSize:14, fontWeight:700, color: category?.id===cat.id ? cat.color : "#6B7280", marginTop:4 }}>{cat.label}</div></button>))}</div>
-        {catObj && catObj.subs.length > 0 && (<div style={{ marginTop:16, animation:"slideUp 0.2s ease" }}><SectionLabel>📎 子類別</SectionLabel><div style={{ display:"flex", flexWrap:"wrap", gap:10 }}>{catObj.subs.map(sub => (<button key={sub} onClick={() => setSubCategory(sub)} style={{ padding:"8px 16px", border:`2px solid ${subCategory===sub ? catObj.color : "#E5E7EB"}`, borderRadius:99, background: subCategory===sub ? catObj.color : "#fff", color: subCategory===sub ? "#fff" : "#374151", fontSize:15, fontWeight:700, transition:"all 0.15s" }}>{sub}</button>))}</div></div>)}
-      </Card>
-      
-      <Card>
-        <SectionLabel>💰 金額 (點擊開啟計算機)</SectionLabel>
-        <div style={{ position:"relative" }}>
-          <span style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", fontSize:28, color:"#9CA3AF", fontWeight:900 }}>$</span>
-          <input type="text" inputMode="none" readOnly value={amount} onClick={() => setShowKeypad(true)} placeholder="0" style={{ width:"100%", fontSize: String(amount).length > 14 ? 22 : String(amount).length > 9 ? 32 : 42, fontWeight:900, border:"2px solid #F3F4F6", borderRadius:12, padding:"16px 16px 16px 48px", color: showKeypad ? "#F59E0B" : "#1a1a1a", background: showKeypad ? "#FFFBEB" : "#F9FAFB", outline:"none", cursor:"pointer", transition:"font-size 0.2s ease, background 0.2s ease", textOverflow: "ellipsis", overflowX: "auto" }} />
-        </div>
-        {showKeypad && (<div ref={keypadRef} style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginTop: 18, animation: "slideUp 0.2s ease" }}>{[{ l: '7', v: '7' }, { l: '8', v: '8' }, { l: '9', v: '9' }, { l: '⌫', v: 'BACK', bg: '#FEE2E2', c: '#EF4444' },{ l: '4', v: '4' }, { l: '5', v: '5' }, { l: '6', v: '6' }, { l: '＋', v: '+', bg: '#FEF3C7', c: '#F59E0B' },{ l: '1', v: '1' }, { l: '2', v: '2' }, { l: '3', v: '3' }, { l: '－', v: '-', bg: '#FEF3C7', c: '#F59E0B' },{ l: 'C', v: 'CLEAR', bg: '#F3F4F6', c: '#6B7280' }, { l: '0', v: '0' }, { l: '×', v: '*', bg: '#FEF3C7', c: '#F59E0B' }, { l: '÷', v: '/', bg: '#FEF3C7', c: '#F59E0B' }].map(k => (<button key={k.l} type="button" onClick={(e) => { e.preventDefault(); if (k.v === 'BACK') setAmount(prev => String(prev).slice(0, -1)); else if (k.v === 'CLEAR') setAmount(""); else setAmount(prev => String(prev) + k.v); }} style={{ padding: "16px 0", fontSize: 26, fontWeight: 900, borderRadius: 14, border: "none", background: k.bg || '#fff', color: k.c || '#1a1a1a', boxShadow: "0 2px 6px rgba(0,0,0,0.06)", cursor: "pointer", fontFamily: "inherit" }}>{k.l}</button>))}<button type="button" onClick={(e) => { e.preventDefault(); setShowKeypad(false); }} style={{ gridColumn: "span 4", padding: "16px 0", fontSize: 18, fontWeight: 900, borderRadius: 14, border: "none", background: '#1a1a1a', color: '#fff', boxShadow: "0 4px 12px rgba(0,0,0,0.15)", cursor: "pointer", fontFamily: "inherit", marginTop: 6, letterSpacing:2 }}>完成</button></div>)}
-        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2} style={{ width:"100%", marginTop:16, fontSize:16, fontWeight:500, border:"2px solid #F3F4F6", borderRadius:12, padding:"14px 16px", color:"#374151", background:"#F9FAFB", outline:"none", resize:"none", lineHeight:1.6 }} />
-        {(() => {
-          if (!note.trim()) return null;
-          const counts = Object.create(null);
-          records.forEach(r => { const n = String(r.note || '').replace(/^'/,'').trim(); if (n) counts[n] = (counts[n] || 0) + 1; });
-          const suggs = Object.keys(counts).filter(n => n.toLowerCase().includes(note.toLowerCase()) && n !== note).sort((a,b) => counts[b] - counts[a]).slice(0, 3);
-          if (suggs.length === 0) return null;
-          return (<div style={{ display:"flex", gap:10, marginTop:12, flexWrap:"wrap", animation:"slideUp 0.2s ease" }}><span style={{ fontSize:14, color:"#9CA3AF", display:"flex", alignItems:"center", fontWeight:700 }}>💡 猜你想輸入：</span>{suggs.map(s => (<button key={s} onClick={() => setNote(s)} style={{ padding:"6px 14px", background:"#F3F4F6", color:"#374151", border:"1px solid #E5E7EB", borderRadius:99, fontSize:15, fontWeight:700, cursor:"pointer" }}>{s}</button>))}</div>);
-        })()}
-      </Card>
-      <button onClick={onSubmit} style={{ width:"100%", padding:"20px 0", background:"#1a1a1a", color:"#F59E0B", border:"none", borderRadius:16, fontSize:22, fontWeight:900, cursor:"pointer", letterSpacing:4, boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>{busy ? "儲存中…" : "＋ 新增支出"}</button>
-      
-      <div style={{ marginTop:30 }}>
-        
-        <div style={{ position: "relative", marginBottom: 20 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 16 }}>🔍</span>
-          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜尋全月紀錄 (備註、類別或成員)..." style={{ width: "100%", padding: "12px 16px 12px 40px", borderRadius: 99, border: "2px solid #E5E7EB", background: "#fff", outline: "none", fontSize: 15, fontWeight: 500, color: "#374151" }} />
-          {searchQuery && (<button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9CA3AF", fontSize: 16, cursor: "pointer", fontWeight: 900 }}>✕</button>)}
+
+        <div style={{
+          display:"grid",
+          gridTemplateColumns:"repeat(5,1fr)",
+          gap:6
+        }}>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => onCategorySelect(cat)}
+              style={{
+                padding:"12px 4px",
+                border:`2px solid ${category?.id === cat.id ? cat.color : "#F0E9E1"}`,
+                borderRadius:14,
+                background:category?.id === cat.id ? cat.color+"18" : "#FAF7F2",
+                cursor:"pointer",textAlign:"center",
+                transition:"all 0.15s"
+              }}
+            >
+              <div style={{fontSize:26}}>{cat.emoji}</div>
+              <div style={{
+                fontSize:14,fontWeight:700,
+                color:category?.id === cat.id ? cat.color : "#74665B",
+                marginTop:4
+              }}>{cat.label}</div>
+            </button>
+          ))}
         </div>
 
-        <SectionLabel>
-          {searchQuery.trim() ? `🔍 搜尋 "${searchQuery}" 的結果` : `🕐 ${formatDate(date)} 記錄`}
-        </SectionLabel>
-        
-        {searchQuery.trim() && displayRecords.length > 0 && (
-          <div style={{ marginBottom: 12, color: "#F59E0B", fontWeight: 900, fontSize: 15, background: "#FEF3C7", padding: "8px 12px", borderRadius: 8, display: "inline-block" }}>
-            合計：{formatMoney(displayRecords.reduce((s, r) => s + r.amount, 0))} (共 {displayRecords.length} 筆)
+        {catObj && catObj.subs.length > 0 && (
+          <div style={{marginTop:16,animation:"slideUp 0.2s ease"}}>
+            <SectionLabel>📎 子類別</SectionLabel>
+
+            <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+              {catObj.subs.map(sub => (
+                <button key={sub} onClick={() => setSubCategory(sub)} style={{
+                  padding:"8px 16px",
+                  border:`2px solid ${subCategory === sub ? catObj.color : "#E4D9CE"}`,
+                  borderRadius:99,
+                  background:subCategory === sub ? catObj.color : "#fff",
+                  color:subCategory === sub ? "#fff" : "#51443B",
+                  fontSize:15,fontWeight:700,
+                  transition:"all 0.15s",cursor:"pointer"
+                }}>{sub}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <SectionLabel>💰 金額 (點擊開啟計算機)</SectionLabel>
+
+        <div style={{position:"relative"}}>
+          <span style={{
+            position:"absolute",left:16,top:"50%",
+            transform:"translateY(-50%)",
+            fontSize:28,color:"#796B61",fontWeight:900
+          }}>$</span>
+
+          <input
+            type="text"
+            inputMode="none"
+            readOnly
+            value={amount}
+            onClick={() => setShowKeypad(true)}
+            placeholder="0"
+            style={{
+              width:"100%",
+              fontSize:String(amount).length > 14
+                ? 22 : String(amount).length > 9 ? 32 : 42,
+              fontWeight:900,
+              border:"2px solid #F0E9E1",
+              borderRadius:12,
+              padding:"16px 16px 16px 48px",
+              color:showKeypad ? "#B96536" : "#40332D",
+              background:showKeypad ? "#FFF5E8" : "#FAF7F2",
+              outline:"none",cursor:"pointer",
+              transition:"font-size 0.2s ease, background 0.2s ease",
+              textOverflow:"ellipsis",overflowX:"auto"
+            }}
+          />
+        </div>
+
+        {showKeypad && (
+          <div ref={keypadRef} style={{
+            display:"grid",
+            gridTemplateColumns:"repeat(4,1fr)",
+            gap:10,marginTop:18,
+            animation:"slideUp 0.2s ease"
+          }}>
+            {keypad.map(k => (
+              <button
+                key={k.l}
+                type="button"
+                onClick={e => {
+                  e.preventDefault();
+                  if (k.v === "BACK") {
+                    setAmount(prev => String(prev).slice(0,-1));
+                  } else if (k.v === "CLEAR") {
+                    setAmount("");
+                  } else {
+                    setAmount(prev => String(prev)+k.v);
+                  }
+                }}
+                style={{
+                  padding:"16px 0",fontSize:26,fontWeight:900,
+                  borderRadius:14,border:"none",
+                  background:k.bg || "#fff",
+                  color:k.c || "#40332D",
+                  boxShadow:"0 2px 6px rgba(0,0,0,0.06)",
+                  cursor:"pointer"
+                }}
+              >{k.l}</button>
+            ))}
+
+            <button
+              type="button"
+              onClick={e => {
+                e.preventDefault();
+                setShowKeypad(false);
+              }}
+              style={{
+                gridColumn:"span 4",padding:"16px 0",
+                fontSize:18,fontWeight:900,
+                borderRadius:14,border:"none",
+                background:"#40332D",color:"#fff",
+                boxShadow:"0 4px 12px rgba(0,0,0,0.15)",
+                cursor:"pointer",marginTop:6,letterSpacing:2
+              }}
+            >完成</button>
           </div>
         )}
 
-        {loading ? <div style={{ textAlign:"center", padding:"30px", color:"#9CA3AF", fontWeight:900, fontSize:18 }}>⏳ 同步資料中...</div> : 
-          displayRecords.length === 0 ? <div style={{ textAlign:"center", padding:"30px", color:"#9CA3AF", fontWeight:700, fontSize:16, background:"#fff", borderRadius:16, border:"2px dashed #E5E7EB" }}>{searchQuery.trim() ? "找不到相關紀錄 🥺" : "這天沒有花錢喔！🎉"}</div> : 
-          displayRecords.map((r, recordIndex) => (
-            <div key={`${r.id}-${recordIndex}`} style={{ background:"#fff", borderRadius:16, padding:"14px 16px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.05)", borderLeft:`6px solid ${r.categoryColor}` }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <div style={{ width:40, height:40, borderRadius:12, background:(r.categoryColor||"#ccc")+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{r.categoryEmoji}</div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:"flex", alignItems:"center" }}>
-                    <div style={{ width: "100px", display:"flex", alignItems:"center", gap:4 }}>
-                      <span style={{ fontWeight:900, fontSize:16, color:"#1a1a1a", whiteSpace: "nowrap" }}>{r.categoryLabel}</span>
-                      {r.subCategory && <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:700, whiteSpace: "nowrap" }}>/ {r.subCategory}</span>}
-                    </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:2, whiteSpace: "nowrap", overflow: "hidden" }}>
-                      <span style={{ fontSize:12, color:"#1a1a1a", letterSpacing: -2 }}>{(r.memberObjs || []).map(m => m.emoji).join("")}</span>
-                      <span style={{ fontSize:11, color:"#9CA3AF", fontWeight:700, marginLeft: 4 }}>{String(r.member).replace(/,/g, "、")}</span>
-                    </div>
+        <textarea
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          placeholder="備註（選填）⋯"
+          rows={2}
+          style={{
+            width:"100%",marginTop:16,
+            fontSize:16,fontWeight:500,
+            border:"2px solid #F0E9E1",borderRadius:12,
+            padding:"14px 16px",
+            color:"#51443B",background:"#FAF7F2",
+            outline:"none",resize:"none",lineHeight:1.6
+          }}
+        />
+
+        {(() => {
+          if (!note.trim()) return null;
+
+          const counts = Object.create(null);
+
+          records.forEach(r => {
+            const n = String(r.note || "").replace(/^'/,"").trim();
+            if (n) counts[n] = (counts[n] || 0)+1;
+          });
+
+          const suggestions = Object.keys(counts)
+            .filter(n =>
+              n.toLowerCase().includes(note.toLowerCase()) && n !== note
+            )
+            .sort((a,b) => counts[b]-counts[a])
+            .slice(0,3);
+
+          if (!suggestions.length) return null;
+
+          return (
+            <div style={{
+              display:"flex",gap:10,marginTop:12,
+              flexWrap:"wrap",animation:"slideUp 0.2s ease"
+            }}>
+              <span style={{
+                fontSize:14,color:"#796B61",
+                display:"flex",alignItems:"center",fontWeight:700
+              }}>💡 猜你想輸入：</span>
+
+              {suggestions.map(s => (
+                <button key={s} onClick={() => setNote(s)} style={{
+                  padding:"6px 14px",background:"#F0E9E1",
+                  color:"#51443B",border:"1px solid #E4D9CE",
+                  borderRadius:99,fontSize:15,fontWeight:700,
+                  cursor:"pointer"
+                }}>{s}</button>
+              ))}
+            </div>
+          );
+        })()}
+      </Card>
+
+      <button onClick={onSubmit} style={{
+        width:"100%",padding:"20px 0",
+        background:"#40332D",color:"#F2BD8D",
+        border:"none",borderRadius:16,
+        fontSize:22,fontWeight:900,
+        cursor:"pointer",letterSpacing:4,
+        boxShadow:"0 4px 12px rgba(64,51,45,0.10)"
+      }}>{busy ? "儲存中…" : "＋ 新增支出"}</button>
+
+      <div style={{marginTop:30}}>
+        <div style={{position:"relative",marginBottom:20}}>
+          <span style={{
+            position:"absolute",left:14,top:"50%",
+            transform:"translateY(-50%)",fontSize:16
+          }}>🔍</span>
+
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="搜尋全月紀錄 (備註、類別或成員)..."
+            style={{
+              width:"100%",padding:"12px 38px 12px 40px",
+              borderRadius:99,border:"2px solid #E4D9CE",
+              background:"#fff",outline:"none",
+              fontSize:15,fontWeight:500,color:"#51443B"
+            }}
+          />
+
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} style={{
+              position:"absolute",right:14,top:"50%",
+              transform:"translateY(-50%)",
+              background:"none",border:"none",
+              color:"#796B61",fontSize:16,
+              cursor:"pointer",fontWeight:900
+            }}>✕</button>
+          )}
+        </div>
+
+        <SectionLabel>
+          {searchQuery.trim()
+            ? `🔍 搜尋 "${searchQuery}" 的結果`
+            : `🕐 ${formatDate(date)} 記錄`}
+        </SectionLabel>
+
+        {searchQuery.trim() && displayRecords.length > 0 && (
+          <div style={{
+            marginBottom:12,color:"#B96536",
+            fontWeight:900,fontSize:15,
+            background:"#FAE6CF",padding:"8px 12px",
+            borderRadius:8,display:"inline-block"
+          }}>
+            合計：{formatMoney(displayRecords.reduce((sum,r) => sum+r.amount,0))}
+            {" "}(共 {displayRecords.length} 筆)
+          </div>
+        )}
+
+        {loading ? (
+          <div style={{
+            textAlign:"center",padding:30,
+            color:"#796B61",fontWeight:900,fontSize:18
+          }}>⏳ 同步資料中...</div>
+        ) : displayRecords.length === 0 ? (
+          <div style={{
+            textAlign:"center",padding:30,
+            color:"#796B61",fontWeight:700,fontSize:16,
+            background:"#fff",borderRadius:16,
+            border:"2px dashed #E4D9CE"
+          }}>
+            {searchQuery.trim()
+              ? "找不到相關紀錄 🥺"
+              : "這天沒有花錢喔！🎉"}
+          </div>
+        ) : displayRecords.map((r,index) => (
+          <div key={`${r.id}-${index}`} style={{
+            background:"#fff",borderRadius:16,
+            padding:"14px 16px",marginBottom:10,
+            boxShadow:"0 2px 8px rgba(0,0,0,0.04)",
+            borderLeft:`6px solid ${r.categoryColor}`
+          }}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{
+                width:40,height:40,borderRadius:12,
+                background:(r.categoryColor || "#ccc")+"22",
+                display:"flex",alignItems:"center",
+                justifyContent:"center",fontSize:22,flexShrink:0
+              }}>{r.categoryEmoji}</div>
+
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{
+                  display:"flex",alignItems:"center",
+                  flexWrap:"wrap",gap:"3px 6px"
+                }}>
+                  <div style={{
+                    display:"flex",alignItems:"center",gap:4
+                  }}>
+                    <span style={{
+                      fontWeight:900,fontSize:16,
+                      color:"#40332D",whiteSpace:"nowrap"
+                    }}>{r.categoryLabel}</span>
+
+                    {r.subCategory && (
+                      <span style={{
+                        fontSize:12,color:"#796B61",
+                        fontWeight:700
+                      }}>/ {r.subCategory}</span>
+                    )}
                   </div>
-                  <div style={{ fontSize:13, color:"#9CA3AF", marginTop:4, fontWeight:500 }}>
-                    {searchQuery.trim() && <span style={{color: "#F59E0B", fontWeight: 700, marginRight: 6}}>[{r.date.substring(5).replace('-','/')}]</span>}
-                    {r.note ? r.note.replace(/^'/, '') : "無備註"}
+
+                  <div style={{
+                    display:"flex",alignItems:"center",
+                    gap:2,overflow:"hidden"
+                  }}>
+                    <span style={{
+                      fontSize:12,color:"#40332D",letterSpacing:-2
+                    }}>{(r.memberObjs || []).map(m => m.emoji).join("")}</span>
+
+                    <span style={{
+                      fontSize:11,color:"#796B61",
+                      fontWeight:700,marginLeft:4
+                    }}>{String(r.member).replace(/,/g,"、")}</span>
                   </div>
-                </div>
-                <div style={{ fontWeight:900, fontSize:15, color:r.categoryColor||"#333", flexShrink:0 }}>{formatMoney(r.amount)}</div>
-                
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, marginLeft: 4, flexShrink:0 }}>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button disabled={r.duplicateId} onClick={() => { setEditId(r.id); setEditAmt(r.amount); setEditNote(r.note ? r.note.replace(/^'/, '') : ""); setConfirmId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, padding:2 }}>✏️</button>
-                    <button disabled={r.duplicateId} onClick={() => { setConfirmId(confirmId === r.id ? null : r.id); setEditId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, padding:2 }}>🗑</button>
-                  </div>
-                  <button onClick={() => onDuplicate(r)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, padding:2 }}>🔁</button>
                 </div>
 
+                <div style={{
+                  fontSize:13,color:"#796B61",
+                  marginTop:4,fontWeight:500,
+                  overflowWrap:"anywhere"
+                }}>
+                  {searchQuery.trim() && (
+                    <span style={{
+                      color:"#B96536",fontWeight:700,marginRight:6
+                    }}>
+                      [{r.date.substring(5).replace("-","/")}]
+                    </span>
+                  )}
+
+                  {r.note ? r.note.replace(/^'/,"") : "無備註"}
+                </div>
               </div>
-              {confirmId === r.id && (<div style={{ marginTop:14, paddingTop: 12, borderTop: "1px dashed #E5E7EB", display:"flex", gap:10, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}><button onClick={() => setConfirmId(null)} style={{ padding:"6px 16px", borderRadius:99, border:"1px solid #E5E7EB", background:"#F3F4F6", color:"#4B5563", fontSize:13, fontWeight:700, cursor:"pointer" }}>取消</button><button onClick={async () => { if (await onDelete(r.id, r.date)) setConfirmId(null); }} style={{ padding:"6px 16px", borderRadius:99, border:"none", background:"#EF4444", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>確認刪除</button></div>)}
-              {editId === r.id && (<div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed #E5E7EB", animation: "slideUp 0.2s ease" }}><div style={{ display: "flex", gap: 8, marginBottom: 10 }}><div style={{ position: "relative", width: "40%" }}><span style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", color:"#9CA3AF", fontSize:14 }}>$</span><input type="text" inputMode="decimal" value={editAmt} onChange={e => setEditAmt(e.target.value)} style={{ width: "100%", padding: "8px 8px 8px 20px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 15, fontWeight:700, outline: "none", background:"#F9FAFB" }} /></div><input type="text" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="備註..." style={{ width: "60%", padding: "8px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, outline: "none", background:"#F9FAFB" }} /></div><div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}><button onClick={() => setEditId(null)} style={{ padding: "6px 16px", borderRadius: 99, background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#4B5563", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>取消</button><button onClick={async () => { if (await onUpdate(r, editAmt, editNote)) setEditId(null); }} style={{ padding: "6px 16px", borderRadius: 99, background: "#10B981", border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>儲存</button></div></div>)}
+
+              <div style={{
+                fontWeight:900,fontSize:15,
+                color:r.categoryColor || "#40332D",flexShrink:0
+              }}>{formatMoney(r.amount)}</div>
+
+              <div style={{
+                display:"flex",flexDirection:"column",
+                alignItems:"center",gap:4,marginLeft:4,flexShrink:0
+              }}>
+                <div style={{display:"flex",gap:8}}>
+                  <button
+                    disabled={r.duplicateId}
+                    onClick={() => {
+                      setEditId(r.id);
+                      setEditAmt(r.amount);
+                      setEditNote(r.note ? r.note.replace(/^'/,"") : "");
+                      setConfirmId(null);
+                    }}
+                    style={{
+                      background:"none",border:"none",
+                      cursor:"pointer",fontSize:16,padding:2
+                    }}
+                  >✏️</button>
+
+                  <button
+                    disabled={r.duplicateId}
+                    onClick={() => {
+                      setConfirmId(confirmId === r.id ? null : r.id);
+                      setEditId(null);
+                    }}
+                    style={{
+                      background:"none",border:"none",
+                      cursor:"pointer",fontSize:16,padding:2
+                    }}
+                  >🗑</button>
+                </div>
+
+                <button onClick={() => onDuplicate(r)} style={{
+                  background:"none",border:"none",
+                  cursor:"pointer",fontSize:16,padding:2
+                }}>🔁</button>
+              </div>
             </div>
-          ))
-        }
+
+            {confirmId === r.id && (
+              <div style={{
+                marginTop:14,paddingTop:12,
+                borderTop:"1px dashed #E4D9CE",
+                display:"flex",gap:10,
+                justifyContent:"flex-end",
+                animation:"slideUp 0.2s ease"
+              }}>
+                <button onClick={() => setConfirmId(null)} style={{
+                  padding:"6px 16px",borderRadius:99,
+                  border:"1px solid #E4D9CE",background:"#F0E9E1",
+                  color:"#66584D",fontSize:13,fontWeight:700,
+                  cursor:"pointer"
+                }}>取消</button>
+
+                <button onClick={async () => {
+                  if (await onDelete(r.id,r.date)) setConfirmId(null);
+                }} style={{
+                  padding:"6px 16px",borderRadius:99,
+                  border:"none",background:"#EF4444",color:"#fff",
+                  fontSize:13,fontWeight:700,cursor:"pointer"
+                }}>確認刪除</button>
+              </div>
+            )}
+
+            {editId === r.id && (
+              <div style={{
+                marginTop:12,paddingTop:12,
+                borderTop:"1px dashed #E4D9CE",
+                animation:"slideUp 0.2s ease"
+              }}>
+                <div style={{display:"flex",gap:8,marginBottom:10}}>
+                  <div style={{position:"relative",width:"40%"}}>
+                    <span style={{
+                      position:"absolute",left:8,top:"50%",
+                      transform:"translateY(-50%)",
+                      color:"#796B61",fontSize:14
+                    }}>$</span>
+
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={editAmt}
+                      onChange={e => setEditAmt(e.target.value)}
+                      style={{
+                        width:"100%",padding:"8px 8px 8px 20px",
+                        borderRadius:8,border:"1px solid #C6B7A9",
+                        fontSize:15,fontWeight:700,outline:"none",
+                        background:"#FAF7F2"
+                      }}
+                    />
+                  </div>
+
+                  <input
+                    type="text"
+                    value={editNote}
+                    onChange={e => setEditNote(e.target.value)}
+                    placeholder="備註..."
+                    style={{
+                      width:"60%",padding:"8px 10px",
+                      borderRadius:8,border:"1px solid #C6B7A9",
+                      fontSize:13,outline:"none",background:"#FAF7F2"
+                    }}
+                  />
+                </div>
+
+                <div style={{
+                  display:"flex",justifyContent:"flex-end",gap:8
+                }}>
+                  <button onClick={() => setEditId(null)} style={{
+                    padding:"6px 16px",borderRadius:99,
+                    background:"#F0E9E1",border:"1px solid #E4D9CE",
+                    color:"#66584D",fontWeight:700,fontSize:13,
+                    cursor:"pointer"
+                  }}>取消</button>
+
+                  <button onClick={async () => {
+                    if (await onUpdate(r,editAmt,editNote)) {
+                      setEditId(null);
+                    }
+                  }} style={{
+                    padding:"6px 16px",borderRadius:99,
+                    background:"#10B981",border:"none",
+                    color:"#fff",fontWeight:700,fontSize:13,
+                    cursor:"pointer"
+                  }}>儲存</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </>
   );
 }
 
-function DashboardView({ prevAvailable, records, prevRecords, loading, selYear, setSelYear, selMonth, setSelMonth }) {
-  const categoryTotals = CATEGORIES.map(cat => ({ ...cat, total: records.filter(r => r.category === cat.id).reduce((s, r) => s + r.amount, 0) })).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
-  
-  const totalSpend = records.reduce((s, r) => s + r.amount, 0);
-  const prevTotalSpend = prevRecords.reduce((s, r) => s + r.amount, 0);
-  const diff = totalSpend - prevTotalSpend;
+function DashboardView({
+  prevAvailable,records,prevRecords,loading,
+  selYear,setSelYear,selMonth,setSelMonth
+}) {
+  const [detailMember,setDetailMember] = useState(null);
+  const [detailCategory,setDetailCategory] = useState(null);
 
-  const RADIAN = Math.PI / 180;
-  const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => { if (percent < 0.05) return null; const r = innerRadius + (outerRadius - innerRadius) * 0.5; const x = cx + r * Math.cos(-midAngle * RADIAN); const y = cy + r * Math.sin(-midAngle * RADIAN); return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={14} fontWeight={900}>{`${(percent*100).toFixed(0)}%`}</text>; };
-  
-  const prevMonth = () => { if (selMonth === 1) { setSelYear(y => y-1); setSelMonth(12); } else setSelMonth(m => m-1); };
-  const nextMonth = () => { if (selMonth === 12) { setSelYear(y => y+1); setSelMonth(1); } else setSelMonth(m => m+1); };
-  
-  const [detailMember, setDetailMember] = useState(null);
-  const [detailCategory, setDetailCategory] = useState(null);
+  useEffect(() => {
+    setDetailMember(null);
+    setDetailCategory(null);
+  },[selYear,selMonth]);
+
+  const categoryTotals = CATEGORIES
+    .map(cat => ({
+      ...cat,
+      total:records
+        .filter(r => r.category === cat.id)
+        .reduce((sum,r) => sum+r.amount,0)
+    }))
+    .filter(c => c.total > 0)
+    .sort((a,b) => b.total-a.total);
+
+  const totalSpend = records.reduce((sum,r) => sum+r.amount,0);
+  const prevTotalSpend = prevRecords.reduce((sum,r) => sum+r.amount,0);
+  const diff = totalSpend-prevTotalSpend;
+
+  const renderLabel = ({
+    cx,cy,midAngle,innerRadius,outerRadius,percent
+  }) => {
+    if (percent < 0.05) return null;
+
+    const radian = Math.PI/180;
+    const radius = innerRadius+(outerRadius-innerRadius)*0.5;
+    const x = cx+radius*Math.cos(-midAngle*radian);
+    const y = cy+radius*Math.sin(-midAngle*radian);
+
+    return (
+      <text
+        x={x} y={y}
+        fill="white"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={14}
+        fontWeight={900}
+      >{`${(percent*100).toFixed(0)}%`}</text>
+    );
+  };
+
+  const prevMonth = () => {
+    if (selMonth === 1) {
+      setSelYear(y => y-1);
+      setSelMonth(12);
+    } else {
+      setSelMonth(m => m-1);
+    }
+  };
+
+  const nextMonth = () => {
+    if (selMonth === 12) {
+      setSelYear(y => y+1);
+      setSelMonth(1);
+    } else {
+      setSelMonth(m => m+1);
+    }
+  };
 
   return (
     <>
-      <Card><div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}><button onClick={prevMonth} style={{ width:44, height:44, borderRadius:99, border:"2px solid #F3F4F6", background:"#F9FAFB", fontSize:24, cursor:"pointer", fontWeight:900 }}>‹</button><div style={{ textAlign:"center" }}><div style={{ fontSize:24, fontWeight:900, color:"#1a1a1a" }}>{selYear}年{String(selMonth).padStart(2,"0")}月</div></div><button onClick={nextMonth} style={{ width:44, height:44, borderRadius:99, border:"2px solid #F3F4F6", background:"#F9FAFB", fontSize:24, cursor:"pointer", fontWeight:900 }}>›</button></div></Card>
-      {loading ? <div style={{ textAlign:"center", padding:"50px 20px", color:"#9CA3AF" }}><div style={{ fontSize:36, marginBottom:16 }}>⏳</div><div style={{ fontSize:18, fontWeight:900 }}>載入資料中...</div></div> : records.length === 0 ? <div style={{ textAlign:"center", padding:"50px 20px", color:"#9CA3AF" }}><div style={{ fontSize:56, marginBottom:16 }}>📭</div><div style={{ fontSize:18, fontWeight:900, color:"#374151" }}>這個月沒有記錄</div></div> : (
+      <Card>
+        <div style={{
+          display:"flex",alignItems:"center",
+          justifyContent:"space-between"
+        }}>
+          <button onClick={prevMonth} style={{
+            width:44,height:44,borderRadius:99,
+            border:"2px solid #F0E9E1",background:"#FAF7F2",
+            fontSize:24,cursor:"pointer",fontWeight:900
+          }}>‹</button>
+
+          <div style={{
+            textAlign:"center",fontSize:24,
+            fontWeight:900,color:"#40332D"
+          }}>{selYear}年{String(selMonth).padStart(2,"0")}月</div>
+
+          <button onClick={nextMonth} style={{
+            width:44,height:44,borderRadius:99,
+            border:"2px solid #F0E9E1",background:"#FAF7F2",
+            fontSize:24,cursor:"pointer",fontWeight:900
+          }}>›</button>
+        </div>
+      </Card>
+
+      {loading ? (
+        <div style={{
+          textAlign:"center",padding:"50px 20px",color:"#796B61"
+        }}>
+          <div style={{fontSize:36,marginBottom:16}}>⏳</div>
+          <div style={{fontSize:18,fontWeight:900}}>載入資料中...</div>
+        </div>
+      ) : records.length === 0 ? (
+        <div style={{
+          textAlign:"center",padding:"50px 20px",color:"#796B61"
+        }}>
+          <div style={{fontSize:56,marginBottom:16}}>📭</div>
+          <div style={{
+            fontSize:18,fontWeight:900,color:"#51443B"
+          }}>這個月沒有記錄</div>
+        </div>
+      ) : (
         <>
-          <Card style={{ background:"#1a1a1a" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <Card style={{background:"#40332D",borderColor:"#40332D"}}>
+            <div style={{
+              display:"flex",justifyContent:"space-between",
+              alignItems:"center"
+            }}>
               <div>
-                <div style={{ color:"#9CA3AF", fontSize:14, fontWeight:700 }}>當月支出</div>
-                <div style={{ color:"#F59E0B", fontSize:38, fontWeight:900, letterSpacing:-1, marginTop:4 }}>{formatMoney(totalSpend)}</div>
+                <div style={{
+                  color:"#D8C9BD",fontSize:14,fontWeight:700
+                }}>當月支出</div>
+
+                <div style={{
+                  color:"#F2BD8D",fontSize:38,
+                  fontWeight:900,letterSpacing:-1,marginTop:4
+                }}>{formatMoney(totalSpend)}</div>
+
                 {prevAvailable && (
-                  <div style={{ fontSize: 13, marginTop: 6, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{
+                    fontSize:13,marginTop:6,fontWeight:700,
+                    display:"flex",alignItems:"center",gap:4
+                  }}>
                     {diff > 0 ? (
-                      <span style={{ color: "#EF4444", background: "#FEE2E2", padding: "2px 6px", borderRadius: 4 }}>📈 比上月多 {formatMoney(diff)}</span>
+                      <span style={{
+                        color:"#EF4444",background:"#FEE2E2",
+                        padding:"2px 6px",borderRadius:4
+                      }}>📈 比上月多 {formatMoney(diff)}</span>
                     ) : diff < 0 ? (
-                      <span style={{ color: "#10B981", background: "#D1FAE5", padding: "2px 6px", borderRadius: 4 }}>📉 比上月少 {formatMoney(Math.abs(diff))}</span>
+                      <span style={{
+                        color:"#10B981",background:"#D1FAE5",
+                        padding:"2px 6px",borderRadius:4
+                      }}>📉 比上月少 {formatMoney(Math.abs(diff))}</span>
                     ) : (
-                      <span style={{ color: "#9CA3AF", background: "#374151", padding: "2px 6px", borderRadius: 4 }}>➖ 與上月持平</span>
+                      <span style={{
+                        color:"#D8C9BD",background:"#51443B",
+                        padding:"2px 6px",borderRadius:4
+                      }}>➖ 與上月持平</span>
                     )}
                   </div>
                 )}
               </div>
-              <div style={{ textAlign:"right" }}>
-                <div style={{ color:"#9CA3AF", fontSize:14, fontWeight:700 }}>筆數</div>
-                <div style={{ color:"#fff", fontSize:38, fontWeight:900, marginTop:4 }}>{records.length}</div>
+
+              <div style={{textAlign:"right"}}>
+                <div style={{
+                  color:"#D8C9BD",fontSize:14,fontWeight:700
+                }}>筆數</div>
+
+                <div style={{
+                  color:"#fff",fontSize:38,
+                  fontWeight:900,marginTop:4
+                }}>{records.length}</div>
               </div>
             </div>
           </Card>
 
-          <Card><SectionLabel>📊 支出類別比例</SectionLabel><ResponsiveContainer width="100%" height={280}><PieChart><Pie data={categoryTotals} dataKey="total" nameKey="label" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={renderLabel}>{categoryTotals.map((cat, i) => <Cell key={i} fill={cat.color} />)}</Pie><Tooltip formatter={(v, n) => [formatMoney(v), n]} /><Legend formatter={(v) => <span style={{ fontSize:14, fontWeight:700 }}>{v}</span>} /></PieChart></ResponsiveContainer></Card>
-          
+          <Card>
+            <SectionLabel>📊 支出類別比例</SectionLabel>
+
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={categoryTotals}
+                  dataKey="total"
+                  nameKey="label"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={110}
+                  labelLine={false}
+                  label={renderLabel}
+                >
+                  {categoryTotals.map(cat =>
+                    <Cell key={cat.id} fill={cat.color} />
+                  )}
+                </Pie>
+
+                <Tooltip formatter={(v,n) => [formatMoney(v),n]} />
+
+                <Legend formatter={v => (
+                  <span style={{fontSize:14,fontWeight:700}}>{v}</span>
+                )} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+
           <Card>
             <SectionLabel>🏆 類別排行榜 (點擊看明細)</SectionLabel>
-            {categoryTotals.map((cat) => (
-              <div key={cat.id} onClick={() => setDetailCategory(cat)} style={{ marginBottom:18, cursor: "pointer", transition: "opacity 0.2s" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:8 }}>
-                  <div style={{ width:32, height:32, borderRadius:10, background:cat.color+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>{cat.emoji}</div>
-                  <span style={{ flex:1, fontWeight:900, fontSize:17, color:"#1a1a1a" }}>{cat.label}</span>
-                  <span style={{ fontWeight:900, fontSize:18, color:cat.color }}>{formatMoney(cat.total)}</span>
-                  <span style={{ fontSize:14, color:"#9CA3AF", width:44, textAlign:"right", fontWeight:700 }}>{totalSpend > 0 ? ((cat.total/totalSpend)*100).toFixed(1) : 0}%</span>
+
+            {categoryTotals.map(cat => (
+              <div
+                key={cat.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`查看${cat.label}分析`}
+                onKeyDown={e => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setDetailCategory(cat);
+                  }
+                }}
+                onClick={() => setDetailCategory(cat)}
+                style={{
+                  marginBottom:18,cursor:"pointer",
+                  transition:"opacity 0.2s"
+                }}
+              >
+                <div style={{
+                  display:"flex",alignItems:"center",
+                  gap:12,marginBottom:8
+                }}>
+                  <div style={{
+                    width:32,height:32,borderRadius:10,
+                    background:cat.color+"22",
+                    display:"flex",alignItems:"center",
+                    justifyContent:"center",fontSize:18
+                  }}>{cat.emoji}</div>
+
+                  <span style={{
+                    flex:1,fontWeight:900,fontSize:17,color:"#40332D"
+                  }}>{cat.label}</span>
+
+                  <span style={{
+                    fontWeight:900,fontSize:18,color:cat.color
+                  }}>{formatMoney(cat.total)}</span>
+
+                  <span style={{
+                    fontSize:14,color:"#796B61",width:44,
+                    textAlign:"right",fontWeight:700
+                  }}>
+                    {totalSpend > 0
+                      ? ((cat.total/totalSpend)*100).toFixed(1)
+                      : 0}%
+                  </span>
                 </div>
-                <div style={{ height:8, background:"#F3F4F6", borderRadius:99, overflow:"hidden" }}>
-                  <div style={{ height:"100%", background:cat.color, borderRadius:99, width:`${totalSpend > 0 ? (cat.total/totalSpend)*100 : 0}%`, transition:"width 0.5s ease" }} />
+
+                <div style={{
+                  height:8,background:"#F0E9E1",
+                  borderRadius:99,overflow:"hidden"
+                }}>
+                  <div style={{
+                    height:"100%",background:cat.color,borderRadius:99,
+                    width:`${totalSpend > 0 ? cat.total/totalSpend*100 : 0}%`,
+                    transition:"width 0.5s ease"
+                  }} />
                 </div>
               </div>
             ))}
@@ -620,20 +2088,55 @@ function DashboardView({ prevAvailable, records, prevRecords, loading, selYear, 
 
           <Card>
             <SectionLabel>👥 成員支出 (點擊看明細)</SectionLabel>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12 }}>
+
+            <div style={{
+              display:"grid",
+              gridTemplateColumns:"repeat(2,1fr)",
+              gap:12
+            }}>
               {MEMBERS.map(m => {
-                const total = records.reduce((sum, r) => {
-                  const memStr = String(r.member || "");
-                  if (!memStr) return sum;
-                  const memList = memStr.split(/[、,]/).map(name => name.trim()).filter(n => n);
-                  if (memList.includes(m.label)) { return sum + Math.round(r.amount / memList.length); }
-                  return sum;
-                }, 0);
+                const total = records.reduce((sum,r) => {
+                  const members = String(r.member || "")
+                    .split(/[、,]/)
+                    .map(name => name.trim())
+                    .filter(Boolean);
+
+                  return members.includes(m.label)
+                    ? sum+Math.round(r.amount/members.length)
+                    : sum;
+                },0);
+
                 return (
-                  <div key={m.id} onClick={() => setDetailMember(m)} style={{ background: total > 0 ? m.color+"12" : "#F9FAFB", border:`2px solid ${total > 0 ? m.color+"40" : "#F3F4F6"}`, borderRadius:16, padding:"18px 14px", textAlign:"center", cursor: "pointer", transition: "all 0.15s" }}>
-                    {m.image ? ( <img src={m.image} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", margin: "0 auto", marginBottom: 6, display: "block" }} alt={m.label} /> ) : ( <div style={{ fontSize:32 }}>{m.emoji}</div> )}
-                    <div style={{ fontWeight:900, fontSize:15, color:"#374151", marginTop:6 }}>{m.label}</div>
-                    <div style={{ fontWeight:900, fontSize:20, color: total > 0 ? m.color : "#D1D5DB", marginTop:6 }}>{formatMoney(total)}</div>
+                  <div
+                    key={m.id}
+                    onClick={() => setDetailMember(m)}
+                    style={{
+                      background:total > 0 ? m.color+"12" : "#FAF7F2",
+                      border:`2px solid ${total > 0 ? m.color+"40" : "#F0E9E1"}`,
+                      borderRadius:16,padding:"18px 14px",
+                      textAlign:"center",cursor:"pointer",
+                      transition:"all 0.15s"
+                    }}
+                  >
+                    {m.image ? (
+                      <img src={m.image} alt={m.label} style={{
+                        width:44,height:44,borderRadius:"50%",
+                        objectFit:"cover",margin:"0 auto 6px",
+                        display:"block"
+                      }} />
+                    ) : (
+                      <div style={{fontSize:32}}>{m.emoji}</div>
+                    )}
+
+                    <div style={{
+                      fontWeight:900,fontSize:15,
+                      color:"#51443B",marginTop:6
+                    }}>{m.label}</div>
+
+                    <div style={{
+                      fontWeight:900,fontSize:20,
+                      color:total > 0 ? m.color : "#796B61",marginTop:6
+                    }}>{formatMoney(total)}</div>
                   </div>
                 );
               })}
@@ -641,90 +2144,386 @@ function DashboardView({ prevAvailable, records, prevRecords, loading, selYear, 
           </Card>
 
           {detailMember && (() => {
-            let memberRecords = [];
+            const memberRecords = [];
+
             records.forEach(r => {
-              const memStr = String(r.member || "");
-              const memList = memStr.split(/[、,]/).map(name => name.trim()).filter(n => n);
-              if (memList.includes(detailMember.label)) { memberRecords.push({ ...r, splitAmount: Math.round(r.amount / memList.length), splitCount: memList.length }); }
+              const members = String(r.member || "")
+                .split(/[、,]/)
+                .map(name => name.trim())
+                .filter(Boolean);
+
+              if (members.includes(detailMember.label)) {
+                memberRecords.push({
+                  ...r,
+                  splitAmount:Math.round(r.amount/members.length),
+                  splitCount:members.length
+                });
+              }
             });
-            memberRecords.sort((a, b) => b.splitAmount - a.splitAmount);
+
+            memberRecords.sort((a,b) => b.splitAmount-a.splitAmount);
 
             return (
-              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', animation: 'fadeIn 0.2s ease' }} onClick={() => setDetailMember(null)}>
-                <div style={{ background: '#F8F7F4', width: '100%', maxWidth: 480, maxHeight: '85vh', borderTopLeftRadius: 24, borderTopRightRadius: 24, display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', paddingBottom: 20 }} onClick={e => e.stopPropagation()}>
-                  <div style={{ padding: '20px 24px', background: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F3F4F6' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {detailMember.image ? <img src={detailMember.image} style={{width:36, height:36, borderRadius:'50%', objectFit:'cover'}} /> : <div style={{fontSize:28}}>{detailMember.emoji}</div>}
-                      <div style={{ fontSize: 18, fontWeight: 900, color: '#1a1a1a' }}>{detailMember.label} 的本月支出</div>
+              <div
+                style={{
+                  position:"fixed",inset:0,
+                  backgroundColor:"rgba(40,30,24,0.48)",
+                  zIndex:9999,display:"flex",
+                  justifyContent:"center",alignItems:"flex-end",
+                  animation:"veilIn 0.2s ease"
+                }}
+                onClick={() => setDetailMember(null)}
+              >
+                <div
+                  style={{
+                    background:"#F7F3EE",width:"100%",maxWidth:480,
+                    maxHeight:"85vh",
+                    borderTopLeftRadius:24,borderTopRightRadius:24,
+                    display:"flex",flexDirection:"column",
+                    animation:"slideUp 0.3s ease",paddingBottom:20
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{
+                    padding:"20px 24px",background:"#fff",
+                    borderTopLeftRadius:24,borderTopRightRadius:24,
+                    display:"flex",alignItems:"center",
+                    justifyContent:"space-between",
+                    borderBottom:"1px solid #F0E9E1"
+                  }}>
+                    <div style={{
+                      display:"flex",alignItems:"center",gap:10
+                    }}>
+                      {detailMember.image ? (
+                        <img src={detailMember.image} alt={detailMember.label} style={{
+                          width:36,height:36,borderRadius:"50%",objectFit:"cover"
+                        }} />
+                      ) : (
+                        <div style={{fontSize:28}}>{detailMember.emoji}</div>
+                      )}
+
+                      <div style={{
+                        fontSize:18,fontWeight:900,color:"#40332D"
+                      }}>{detailMember.label} 的本月支出</div>
                     </div>
-                    <button onClick={() => setDetailMember(null)} style={{ background: '#F3F4F6', border: 'none', width: 32, height: 32, borderRadius: '50%', fontSize: 16, cursor: 'pointer', color: '#6B7280', fontWeight: 900, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+
+                    <button onClick={() => setDetailMember(null)} style={{
+                      background:"#F0E9E1",border:"none",
+                      width:32,height:32,borderRadius:"50%",
+                      fontSize:16,cursor:"pointer",color:"#74665B",
+                      fontWeight:900,display:"flex",
+                      alignItems:"center",justifyContent:"center"
+                    }}>✕</button>
                   </div>
-                  <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1 }}>
-                    {memberRecords.length === 0 ? ( <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0', fontWeight: 700 }}>這個月還沒有花費喔！</div> ) : (
-                      memberRecords.map((r, recordIndex) => (
-                        <div key={`${r.id}-${recordIndex}`} style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', borderLeft: `6px solid ${r.categoryColor}` }}>
-                          <div style={{ width: 40, height: 40, borderRadius: 12, background: (r.categoryColor||'#ccc')+'22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{r.categoryEmoji}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontWeight: 900, fontSize: 16, color: '#1a1a1a' }}>{r.categoryLabel}</span>
-                              {r.splitCount > 1 && <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 4, fontWeight: 900, whiteSpace: "nowrap" }}>{String(r.member).replace(/,/g, "、")} 平分</span>}
-                            </div>
-                            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, fontWeight: 700 }}>
-                              {r.date.substring(5).replace('-','/')} {r.note ? ` • ${r.note.replace(/^'/, '')}` : ''}
-                            </div>
+
+                  <div style={{
+                    padding:"16px 20px",overflowY:"auto",flex:1
+                  }}>
+                    {memberRecords.length === 0 ? (
+                      <div style={{
+                        textAlign:"center",color:"#796B61",
+                        padding:"40px 0",fontWeight:700
+                      }}>這個月還沒有花費喔！</div>
+                    ) : memberRecords.map((r,i) => (
+                      <div key={`${r.id}-${i}`} style={{
+                        background:"#fff",borderRadius:16,
+                        padding:"14px 16px",marginBottom:10,
+                        display:"flex",alignItems:"center",gap:12,
+                        boxShadow:"0 2px 8px rgba(0,0,0,0.04)",
+                        borderLeft:`6px solid ${r.categoryColor}`
+                      }}>
+                        <div style={{
+                          width:40,height:40,borderRadius:12,
+                          background:(r.categoryColor || "#ccc")+"22",
+                          display:"flex",alignItems:"center",
+                          justifyContent:"center",fontSize:22,flexShrink:0
+                        }}>{r.categoryEmoji}</div>
+
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{
+                            display:"flex",alignItems:"center",
+                            gap:6,flexWrap:"wrap"
+                          }}>
+                            <span style={{
+                              fontWeight:900,fontSize:16,color:"#40332D"
+                            }}>{r.categoryLabel}</span>
+
+                            {r.splitCount > 1 && (
+                              <span style={{
+                                fontSize:10,background:"#FAE6CF",
+                                color:"#A65C31",padding:"2px 6px",
+                                borderRadius:4,fontWeight:900
+                              }}>
+                                {String(r.member).replace(/,/g,"、")} 平分
+                              </span>
+                            )}
                           </div>
-                          <div style={{ fontWeight: 900, fontSize: 16, color: r.categoryColor||'#333' }}>{formatMoney(r.splitAmount)}</div>
+
+                          <div style={{
+                            fontSize:12,color:"#796B61",
+                            marginTop:4,fontWeight:700,
+                            overflowWrap:"anywhere"
+                          }}>
+                            {r.date.substring(5).replace("-","/")}
+                            {r.note ? ` • ${r.note.replace(/^'/,"")}` : ""}
+                          </div>
                         </div>
-                      ))
-                    )}
+
+                        <div style={{
+                          fontWeight:900,fontSize:16,
+                          color:r.categoryColor || "#40332D"
+                        }}>{formatMoney(r.splitAmount)}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             );
           })()}
 
-          {detailCategory && (() => {
-            const catRecords = records.filter(r => r.category === detailCategory.id);
-            const subTotals = Object.create(null);
-            catRecords.forEach(r => {
-                const sub = r.subCategory || "未分類";
-                subTotals[sub] = (subTotals[sub] || 0) + r.amount;
-            });
-            const subList = Object.entries(subTotals).map(([label, total]) => ({ label, total })).sort((a,b) => b.total - a.total);
-            const catTotal = catRecords.reduce((s, r) => s + r.amount, 0);
-
-            return (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', animation: 'fadeIn 0.2s ease' }} onClick={() => setDetailCategory(null)}>
-                  <div style={{ background: '#F8F7F4', width: '100%', maxWidth: 480, maxHeight: '85vh', borderTopLeftRadius: 24, borderTopRightRadius: 24, display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', paddingBottom: 20 }} onClick={e => e.stopPropagation()}>
-                    <div style={{ padding: '20px 24px', background: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F3F4F6' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{width: 36, height: 36, borderRadius: 10, background: detailCategory.color+"22", display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20}}>{detailCategory.emoji}</div>
-                        <div style={{ fontSize: 18, fontWeight: 900, color: '#1a1a1a' }}>{detailCategory.label} 分析</div>
-                      </div>
-                      <button onClick={() => setDetailCategory(null)} style={{ background: '#F3F4F6', border: 'none', width: 32, height: 32, borderRadius: '50%', fontSize: 16, cursor: 'pointer', color: '#6B7280', fontWeight: 900, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
-                    </div>
-                    <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1 }}>
-                       {subList.length === 0 ? (
-                           <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0', fontWeight: 700 }}>這個類別沒有明細喔！</div>
-                       ) : (
-                         subList.map(sub => (
-                             <div key={sub.label} style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                               <div style={{ fontWeight: 900, fontSize: 16, color: '#1a1a1a' }}>{sub.label}</div>
-                               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                 <span style={{ fontWeight: 900, fontSize: 18, color: detailCategory.color }}>{formatMoney(sub.total)}</span>
-                                 <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 700, width: 44, textAlign: 'right' }}>{catTotal > 0 ? ((sub.total / catTotal) * 100).toFixed(1) : 0}%</span>
-                               </div>
-                             </div>
-                         ))
-                       )}
-                    </div>
-                  </div>
-                </div>
-            );
-          })()}
+          {detailCategory && (
+            <CategoryDetails
+              category={detailCategory}
+              records={records}
+              selYear={selYear}
+              selMonth={selMonth}
+              onClose={() => setDetailCategory(null)}
+            />
+          )}
         </>
       )}
     </>
+  );
+}
+
+/* 主類別 → 子類別 → 每筆帳目 */
+function CategoryDetails({
+  category,records,selYear,selMonth,onClose
+}) {
+  const [sub,setSub] = useState(null);
+  const closeRef = useRef(null);
+  const bodyRef = useRef(null);
+  const sheetRef = useRef(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus?.();
+    };
+  },[]);
+
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+
+    const keyHandler = e => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (sub !== null) setSub(null);
+        else onClose();
+      }
+
+      if (e.key === "Tab") {
+        const items = sheetRef.current?.querySelectorAll(
+          'button:not([disabled]), [tabindex="0"]'
+        );
+
+        if (!items?.length) return;
+
+        const first = items[0];
+        const last = items[items.length-1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown",keyHandler);
+    return () => window.removeEventListener("keydown",keyHandler);
+  },[sub,onClose]);
+
+  const month = `${selYear}-${String(selMonth).padStart(2,"0")}`;
+
+  const categoryRows = records.filter(r =>
+    r.category === category.id &&
+    r.date.slice(0,7) === month
+  );
+
+  const groups = new Map();
+
+  categoryRows.forEach(r => {
+    const name = r.subCategory || "未分類";
+    const group = groups.get(name) || {
+      label:name,total:0,count:0
+    };
+
+    group.total += r.amount;
+    group.count++;
+    groups.set(name,group);
+  });
+
+  const list = [...groups.values()]
+    .sort((a,b) => b.total-a.total);
+
+  const entries = sub === null
+    ? []
+    : categoryRows
+        .filter(r => (r.subCategory || "未分類") === sub)
+        .sort((a,b) => b.date.localeCompare(a.date));
+
+  const categoryTotal = categoryRows.reduce((sum,r) => sum+r.amount,0);
+  const subTotal = entries.reduce((sum,r) => sum+r.amount,0);
+
+  return (
+    <div className="report-overlay" onClick={onClose}>
+      <section
+        className="report-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="category-title"
+        ref={sheetRef}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="report-head">
+          <div>
+            <div style={{
+              fontSize:12,color:"#796B61",marginBottom:4
+            }}>{selYear} 年 {selMonth} 月</div>
+
+            <h2 id="category-title" style={{
+              fontSize:19,color:"#40332D"
+            }}>
+              {category.emoji}{" "}
+              {sub === null
+                ? `${category.label} 分析`
+                : `${category.label} / ${sub} 明細`}
+            </h2>
+          </div>
+
+          <button
+            className="report-close"
+            ref={closeRef}
+            onClick={onClose}
+            aria-label="關閉類別明細"
+          >✕</button>
+        </div>
+
+        <div className="report-body" ref={bodyRef}>
+          {sub === null ? (
+            <>
+              <div className="report-summary">
+                <strong>合計 {formatMoney(categoryTotal)}</strong>
+                <div style={{fontSize:14}}>
+                  共 {categoryRows.length} 筆，點選下方項目可看每筆帳目。
+                </div>
+              </div>
+
+              {list.length === 0 ? (
+                <p>這個類別目前沒有帳目。</p>
+              ) : list.map(item => (
+                <button
+                  className="report-row"
+                  key={item.label}
+                  aria-label={`查看${item.label}明細`}
+                  onClick={() => {
+                    setSub(item.label);
+                    closeRef.current?.focus();
+                  }}
+                >
+                  <span>
+                    <strong style={{fontSize:16}}>{item.label}</strong>
+                    <span style={{
+                      display:"block",fontSize:13,
+                      color:"#796B61",marginTop:5
+                    }}>{item.count} 筆</span>
+                  </span>
+
+                  <span style={{
+                    display:"flex",alignItems:"center",gap:12
+                  }}>
+                    <span style={{textAlign:"right"}}>
+                      <strong style={{
+                        display:"block",fontSize:18,color:category.color
+                      }}>{formatMoney(item.total)}</strong>
+
+                      <span style={{fontSize:13,color:"#796B61"}}>
+                        {categoryTotal > 0
+                          ? (item.total/categoryTotal*100).toFixed(1)
+                          : "0.0"}%
+                      </span>
+                    </span>
+
+                    <span aria-hidden="true">›</span>
+                  </span>
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              <button
+                className="report-back"
+                onClick={() => {
+                  setSub(null);
+                  closeRef.current?.focus();
+                }}
+              >‹ 返回{category.label}分析</button>
+
+              <div className="report-summary">
+                <strong>{sub}合計 {formatMoney(subTotal)}</strong>
+
+                <div style={{fontSize:14}}>
+                  共 {entries.length} 筆・以下為整筆支出金額，未按成員平分。
+                </div>
+              </div>
+
+              {entries.length === 0 ? (
+                <p>目前沒有符合的帳目。</p>
+              ) : entries.map((r,i) => (
+                <article
+                  className="report-entry"
+                  key={`${r.id}-${i}`}
+                  style={{borderLeftColor:category.color}}
+                >
+                  <div style={{
+                    display:"flex",
+                    justifyContent:"space-between",
+                    alignItems:"baseline",
+                    gap:12,
+                    flexWrap:"wrap"
+                  }}>
+                    <strong style={{fontSize:15}}>
+                      {formatDate(r.date)}
+                    </strong>
+
+                    <strong style={{
+                      fontSize:20,color:category.color
+                    }}>{formatMoney(r.amount)}</strong>
+                  </div>
+
+                  <p>
+                    成員：{String(r.member || "未填寫").replace(/,/g,"、")}
+                  </p>
+
+                  <p>
+                    備註：{String(r.note || "").replace(/^'/,"") || "無備註"}
+                  </p>
+                </article>
+              ))}
+            </>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
