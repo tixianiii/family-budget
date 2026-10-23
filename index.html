@@ -393,7 +393,35 @@ function enrichRecords(rows) {
   }).sort((a,b) => b.date.localeCompare(a.date));
 }
 
-async function apiCall(payload) {
+let apiQueue = Promise.resolve();
+
+function apiCall(payload) {
+  const run = async () => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await apiCallOnce(payload);
+      } catch (error) {
+        if (payload.action !== 'read' || error.code !== 'BUSY') {
+          throw error;
+        }
+
+        if (attempt === 2) {
+          throw new Error('系統仍忙碌，請稍後按上方 🔄 重新讀取');
+        }
+
+        await new Promise(resolve =>
+          setTimeout(resolve, 1500 * (attempt + 1))
+        );
+      }
+    }
+  };
+
+  const task = apiQueue.then(run);
+  apiQueue = task.catch(() => {});
+  return task;
+}
+
+async function apiCallOnce(payload) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
 
@@ -2528,7 +2556,6 @@ function CategoryDetails({
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
 </script>
  <style>
   .queue-header {
@@ -2737,6 +2764,7 @@ function QueueApp() {
 
   processor.current = async () => {
     if (running.current || !alive.current) return;
+    if (!readQueue().some(item => !item.fatal)) return;
 
     running.current = true;
     clearTimeout(timer.current);
