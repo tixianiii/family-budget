@@ -2,7 +2,8 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="referrer" content="no-referrer" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>家庭記帳本</title>
 
 <link rel="apple-touch-icon" href="icon.png">
@@ -11,12 +12,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js" crossorigin></script>
-<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
-<script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.4/lunar.min.js"></script>
+<script integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+<script integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script integrity="sha384-/AfDwVDXNopzPvhxMPQ11y1OCpR6mVkWx47qzSwIiquvxkcMkZddEzDNtIOtfCpk" src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js" crossorigin></script>
+<script integrity="sha384-d1XH4LhwLW8j0l6VXMP8yJabdGY9ZqtZk7k7PaPk5NoUCcZ/hDkL5aaKioKQbcZg" src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js" crossorigin></script>
+<script integrity="sha384-aGlMNK3U/x0wl4lEH5jD1PGhJlX9hApuPmIiA5gtiYCOQ1J8ejIdC0btaU/TMoBD" src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
+<script integrity="sha384-BHBgQvv/4lYNIRKBbW2tvI11T48cj7sQ4xdSryI8pFNFcnSgl+BeikmOtQB2qpez" src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.4/lunar.min.js" crossorigin="anonymous"></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -65,19 +66,69 @@ const CATEGORIES = [
 ];
 
 const getCatById = (label) => CATEGORIES.find(c => c.label === label) || CATEGORIES[CATEGORIES.length - 1];
-const cleanDate = (str) => { if (!str) return ""; const d = new Date(str); return isNaN(d.getTime()) ? String(str).split("T")[0] : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const cleanDate = (value) => {
+  const text = String(value || "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const d = new Date(value);
+  if (!Number.isFinite(d.getTime())) return "";
+  return new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+};
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const formatDate = (str) => { const clean = cleanDate(str); const parts = clean.split("-"); return parts.length !== 3 ? clean : `${parts[0]}年${parts[1]}月${parts[2]}日`; };
 const formatMoney = (n) => `$${Number(n).toLocaleString()}`;
 
 
-// 🌟 100% 繁體純臺灣版節日與農曆字典 (封殺中國套件輸出)
+
+// 不執行輸入字串，只接受四則運算、小數及括號。
+function calculateAmount(value) {
+  const text = String(value).replace(/\s/g, '');
+  if (!text || text.length > 120 || /[^0-9.+*/()\-]/.test(text)) throw new Error('算式不正確');
+  let pos = 0;
+  function primary() {
+    if (text[pos] === '+' || text[pos] === '-') { const sign = text[pos++]; return (sign === '-' ? -1 : 1) * primary(); }
+    if (text[pos] === '(') { pos++; const n = add(); if (text[pos++] !== ')') throw new Error('括號不完整'); return n; }
+    const match = text.slice(pos).match(/^(?:\d+(?:\.\d*)?|\.\d+)/);
+    if (!match) throw new Error('算式不完整'); pos += match[0].length; return Number(match[0]);
+  }
+  function multiply() { let n = primary(); while (text[pos] === '*' || text[pos] === '/') { const op = text[pos++], v = primary(); n = op === '*' ? n * v : n / v; } return n; }
+  function add() { let n = multiply(); while (text[pos] === '+' || text[pos] === '-') { const op = text[pos++], v = multiply(); n = op === '+' ? n + v : n - v; } return n; }
+  const raw = add(), n = Math.round((raw + Number.EPSILON) * 100) / 100;
+  if (pos !== text.length || !Number.isFinite(raw) || n <= 0 || n > 100000000) throw new Error('金額須大於零且不超過一億元');
+  return n;
+}
+const newId = () => crypto.randomUUID();
+const PENDING_KEY = 'family_ledger_v2_pending';
+function loadPending() { try { return JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch (_) { return null; } }
+function enrichRecords(rows) {
+  if (!Array.isArray(rows)) throw new Error('回傳格式不正確');
+  return rows.map(r => {
+    const cat = getCatById(r.categoryLabel);
+    const names = String(r.member || '').split(/[、,]/).map(n => n.trim()).filter(Boolean);
+    const amount = Number(r.amount);
+    if (!Number.isFinite(amount) || !cleanDate(r.date)) throw new Error('舊帳目含無效日期或金額，請先檢查試算表');
+    return {...r, id:String(r.id), amount, note:String(r.note || ''), date:cleanDate(r.date), category:cat.id, categoryEmoji:cat.emoji, categoryColor:cat.color, memberObjs:names.map(n => MEMBERS.find(m => m.label === n)).filter(Boolean)};
+  }).sort((a,b) => b.date.localeCompare(a.date));
+}
+async function apiCall(payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {method:'POST', redirect:'follow', credentials:'omit', cache:'no-store', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload), signal:controller.signal});
+    if (!response.ok) throw new Error('連線失敗');
+    const data = await response.json();
+    if (!data || !['ok','error'].includes(data.status)) throw new Error('回傳格式不正確');
+    if (data.status !== 'ok') { const error = new Error(data.message || '操作失敗'); error.code = data.code; throw error; }
+    return data;
+  } finally { clearTimeout(timeout); }
+}
+
+// 台灣節慶與繁體農曆顯示
 const lunarMonths = ["", "正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "臘月"];
 const lunarDays = ["", "初一", "初二", "初三", "初四", "初五", "初六", "初七", "初八", "初九", "初十", "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十", "廿一", "廿二", "廿三", "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"];
 
 const twSolarFestivals = {
   "01-01": "元旦", "02-14": "情人節", "02-28": "和平紀念日", "04-04": "兒童節",
-  "05-01": "勞動節", "08-08": "父親節", "09-28": "教師節", "10-10": "國慶日",
+  "05-01": "勞工節", "08-08": "父親節", "09-28": "教師節", "10-10": "國慶日",
   "10-31": "萬聖節", "12-25": "聖誕節"
 };
 
@@ -91,20 +142,21 @@ const getLunarText = (y, m, d) => {
   if (typeof Solar === 'undefined') return { text: "", festival: "", fullLunar: "" };
   try {
     const lunar = Solar.fromYmd(y, m, d).getLunar();
+    const isLeap = lunar.getMonth() < 0;
     const lMonth = Math.abs(lunar.getMonth());
     const lDay = lunar.getDay();
     const solarMd = String(m).padStart(2,'0') + "-" + String(d).padStart(2,'0');
     const lunarMd = String(lMonth).padStart(2,'0') + "-" + String(lDay).padStart(2,'0');
 
     let text = lunarDays[lDay] || "";
-    if (lDay === 1) text = lunarMonths[lMonth];
+    if (lDay === 1) text = (isLeap ? "閏" : "") + lunarMonths[lMonth];
 
     let festivals = [];
     if (twSolarFestivals[solarMd]) festivals.push(twSolarFestivals[solarMd]);
-    if (twLunarFestivals[lunarMd]) festivals.push(twLunarFestivals[lunarMd]);
+    if (!isLeap && twLunarFestivals[lunarMd]) festivals.push(twLunarFestivals[lunarMd]);
     
     // 獨立處理除夕 (因為可能是臘月29或30)
-    if (lunar.getMonth() === 12 && lDay === lunar.getMonthDays() && !festivals.includes("除夕")) {
+    if (lunar.getMonth() === 12 && Solar.fromYmd(y, m, d).next(1).getLunar().getMonth() === 1 && Solar.fromYmd(y, m, d).next(1).getLunar().getDay() === 1 && !festivals.includes("除夕")) {
       festivals.push("除夕");
     }
 
@@ -118,7 +170,7 @@ const getLunarText = (y, m, d) => {
     return { 
       text, 
       festival: festivals.join("、"), 
-      fullLunar: `農曆 ${lunarMonths[lMonth]}${lunarDays[lDay]}` 
+      fullLunar: `農曆 ${isLeap ? "閏" : ""}${lunarMonths[lMonth]}${lunarDays[lDay]}` 
     };
   } catch (e) {
     return { text: "", festival: "", fullLunar: "" };
@@ -213,62 +265,76 @@ function App() {
 
   const showToast = useCallback((msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }, []);
   
-  const fetchRecords = useCallback(async (year, month) => {
-    const targetMonth = `${year}_${String(month).padStart(2, '0')}`;
-    const cacheKey = `cache_${targetMonth}`;
-    const cachedData = localStorage.getItem(cacheKey);
-    if (cachedData) { try { setRecords(JSON.parse(cachedData)); setLoading(false); } catch(e) {} } else { setLoading(true); }
-    
-    try {
-      const res = await fetch(`${APPS_SCRIPT_URL}?month=${targetMonth}`);
-      const data = await res.json();
-      if (data.status === "ok") {
-        const enriched = data.records.map(r => {
-          const cat = getCatById(r.categoryLabel);
-          const memberNames = String(r.member || "").split(/[、,]/).map(name => name.trim()).filter(n => n);
-          const memObjs = memberNames.map(name => MEMBERS.find(m => m.label === name) || MEMBERS[0]);
-          return { ...r, date: cleanDate(r.date), category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, memberObjs: memObjs };
-        });
-        enriched.sort((a,b) => new Date(b.date) - new Date(a.date));
-        setRecords(enriched);
-        localStorage.setItem(cacheKey, JSON.stringify(enriched));
-      }
-    } catch (err) { if (!cachedData) showToast(`連線失敗`, "error"); } finally { setLoading(false); }
-
-    let pY = year, pM = month - 1;
-    if (pM === 0) { pY -= 1; pM = 12; }
-    const prevTargetMonth = `${pY}_${String(pM).padStart(2, '0')}`;
-    const prevCacheKey = `cache_${prevTargetMonth}`;
-    const prevCachedData = localStorage.getItem(prevCacheKey);
-    if (prevCachedData) { try { setPrevRecords(JSON.parse(prevCachedData)); } catch(e) {} } else { setPrevRecords([]); }
-    
-    fetch(`${APPS_SCRIPT_URL}?month=${prevTargetMonth}`).then(res => res.json()).then(data => {
-      if (data.status === "ok") {
-        const enriched = data.records.map(r => {
-          const cat = getCatById(r.categoryLabel);
-          const memberNames = String(r.member || "").split(/[、,]/).map(name => name.trim()).filter(n => n);
-          const memObjs = memberNames.map(name => MEMBERS.find(m => m.label === name) || MEMBERS[0]);
-          return { ...r, date: cleanDate(r.date), category: cat.id, categoryEmoji: cat.emoji, categoryColor: cat.color, memberObjs: memObjs };
-        });
-        setPrevRecords(enriched);
-        localStorage.setItem(prevCacheKey, JSON.stringify(enriched));
-      }
-    }).catch(() => {});
-  }, [showToast]);
-
-  useEffect(() => { fetchRecords(selYear, selMonth); }, [selYear, selMonth, fetchRecords]);
-  useEffect(() => { if (date) { const [y, m] = date.split("-"); setSelYear(Number(y)); setSelMonth(Number(m)); } }, [date]);
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState(loadPending);
+  const [syncMessage, setSyncMessage] = useState('');
+  const [readError, setReadError] = useState('');
+  const [prevAvailable, setPrevAvailable] = useState(false);
+  const mutationLock = useRef(false);
+  const pendingRef = useRef(pending);
+  const fetchSequence = useRef(0);
+  const viewRef = useRef({year:selYear, month:selMonth});
+  viewRef.current = {year:selYear, month:selMonth};
 
   useEffect(() => {
-    let startY = 0; let currentY = 0; let isAtTop = false;
-    const handleTouchStart = (e) => { if (window.scrollY <= 0) { startY = e.touches[0].clientY; currentY = startY; isAtTop = true; } else { isAtTop = false; } };
-    const handleTouchMove = (e) => { if (isAtTop) currentY = e.touches[0].clientY; };
-    const handleTouchEnd = () => { if (isAtTop && (currentY - startY > 100)) { showToast("🔄 重新載入最新資料..."); setTimeout(() => window.location.reload(), 300); } startY = 0; currentY = 0; isAtTop = false; };
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    window.addEventListener('touchend', handleTouchEnd, { passive: true });
-    return () => { window.removeEventListener('touchstart', handleTouchStart); window.removeEventListener('touchmove', handleTouchMove); window.removeEventListener('touchend', handleTouchEnd); };
-  }, [showToast]);
+    // 移除舊版留在此網站的帳目快取，不動其他應用程式資料。
+    try { localStorage.removeItem('family_ledger_access_key'); Object.keys(localStorage).filter(k => /^cache_\d{4}_\d{2}$/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (_) {}
+    const preventLeave = e => { if (mutationLock.current || pendingRef.current) { e.preventDefault(); e.returnValue = ''; } };
+    window.addEventListener('beforeunload', preventLeave);
+    return () => window.removeEventListener('beforeunload', preventLeave);
+  }, []);
+
+  const fetchRecords = useCallback(async (year, month) => {
+    const sequence = ++fetchSequence.current;
+    setLoading(true); setReadError(''); setRecords([]); setPrevRecords([]); setPrevAvailable(false);
+    const current = `${year}_${String(month).padStart(2,'0')}`;
+    const pm = month === 1 ? 12 : month - 1, py = month === 1 ? year - 1 : year;
+    const previous = `${py}_${String(pm).padStart(2,'0')}`;
+    await Promise.all([
+      apiCall({action:'read',month:current}).then(data => {
+        if (sequence === fetchSequence.current) setRecords(enrichRecords(data.records));
+      }).catch(error => { if (sequence === fetchSequence.current) setReadError(error.message || '讀取失敗，請重新整理'); })
+      .finally(() => { if (sequence === fetchSequence.current) setLoading(false); }),
+      apiCall({action:'read',month:previous}).then(data => {
+        if (sequence === fetchSequence.current) { setPrevRecords(enrichRecords(data.records)); setPrevAvailable(true); }
+      }).catch(() => {})
+    ]);
+  }, []);
+  useEffect(() => { fetchRecords(selYear, selMonth); return () => { fetchSequence.current++; }; }, [selYear, selMonth, fetchRecords]);
+  useEffect(() => { if (date) { const [y,m] = date.split('-'); setSelYear(Number(y)); setSelMonth(Number(m)); } }, [date]);
+
+  function rememberPending(value) {
+    // 必須先成功保存原請求才可送出；重整後沿用相同 ID。
+    if (value) sessionStorage.setItem(PENDING_KEY, JSON.stringify(value));
+    else sessionStorage.removeItem(PENDING_KEY);
+    pendingRef.current = value; setPending(value);
+  }
+  async function runMutation(payload, retry = false) {
+    if (mutationLock.current || (!retry && pendingRef.current)) return false;
+    mutationLock.current = true; setBusy(true); setSyncMessage('正在儲存，請稍候…');
+    try {
+      rememberPending(payload);
+      fetchSequence.current++; // 作廢任何寫入前開始的讀取。
+      await apiCall(payload);
+      rememberPending(null);
+      if (payload.action === 'write') { setSelectedMembers([]); setCategory(null); setSubCategory(null); setAmount(''); setNote(''); }
+      setSyncMessage(payload.action === 'delete' ? '已刪除這筆帳目。' : '已確認儲存成功。');
+      showToast(payload.action === 'delete' ? '🗑 已刪除' : '✅ 已儲存');
+      return true;
+    } catch (error) {
+      if (!pendingRef.current) { setSyncMessage('瀏覽器無法保留待確認操作，因此尚未送出。請確認瀏覽器允許此網站使用儲存空間。'); return false; }
+      const definitive = ['VALIDATION','CONFLICT','DUPLICATE_ID','NOT_FOUND','SCHEMA'];
+      if (definitive.includes(error.code)) {
+        rememberPending(null); setSyncMessage(error.message + ' 請確認最新帳目後再操作。');
+      } else {
+        setSyncMessage('尚未確認儲存結果。請按「重試原操作」，不要重新新增相同帳目。');
+      }
+      return false;
+    } finally {
+      mutationLock.current = false; setBusy(false);
+      const view = viewRef.current; fetchRecords(view.year, view.month);
+    }
+  }
 
   const toggleMember = (m) => {
     setSelectedMembers(prev => {
@@ -280,52 +346,23 @@ function App() {
   };
 
   const handleSubmit = async () => {
-    if (selectedMembers.length === 0 || !category || !amount) return showToast("資料不完整哦", "error");
-    let calcAmt = 0; 
-    try { calcAmt = Function(`"use strict"; return (${String(amount).replace(/[^-()\d/*+.]/g, '')})`)(); } 
-    catch(e) { return showToast("算式錯誤", "error"); }
-    if (!calcAmt || isNaN(calcAmt) || calcAmt <= 0) return showToast("無效金額", "error");
-    
-    const memberLabels = selectedMembers.map(m => m.label).join("、");
-    const fakeId = String(Date.now());
-    
-    const newRecord = {
-      id: fakeId, date: date, amount: calcAmt, note: note || "", member: memberLabels,
-      category: category.id, categoryLabel: category.label, categoryEmoji: category.emoji, categoryColor: category.color,
-      subCategory: subCategory || "", memberObjs: [...selectedMembers]
-    };
-    
-    setRecords(prev => [newRecord, ...prev].sort((a,b) => new Date(b.date) - new Date(a.date)));
-    showToast("✅ 記帳成功！"); 
-    setSelectedMembers([]); setCategory(null); setSubCategory(null); setAmount(""); setNote("");
-    
-    const p = new URLSearchParams({ action: "write", id: fakeId, date: date, member: memberLabels, categoryLabel: category.label, subCategory: subCategory || "", amount: String(calcAmt), note: note ? "'" + note : "" });
-    fetch(`${APPS_SCRIPT_URL}?${p.toString()}`).then(res => res.json()).then(data => {
-      if(data.status !== "ok") { showToast("❌ 背景同步異常", "error"); }
-    }).catch(err => { showToast("❌ 網路異常，背景同步失敗", "error"); });
-  };
-
-  const handleDelete = async (id, rDate) => {
-    setRecords(prev => prev.filter(r => r.id !== id));
-    showToast("🗑 已刪除");
-    const p = new URLSearchParams({ action: "delete", id: String(id), date: rDate });
-    fetch(`${APPS_SCRIPT_URL}?${p.toString()}`).catch(() => showToast("❌ 背景刪除失敗", "error"));
-  };
-
-  const handleUpdate = async (record, nAmt, nNote) => {
-    let calcAmt = 0; 
-    try { calcAmt = Function(`"use strict"; return (${String(nAmt).replace(/[^-()\d/*+.]/g, '')})`)(); } 
-    catch(e) { return showToast("算式錯誤", "error"); }
-    if (!calcAmt || isNaN(calcAmt) || calcAmt <= 0) return showToast("無效金額", "error");
-    
-    setRecords(prev => prev.map(r => r.id === record.id ? { ...r, amount: calcAmt, note: nNote || "" } : r));
-    showToast("✅ 修改成功！");
-    
+    if (mutationLock.current || pendingRef.current) return;
+    if (!selectedMembers.length || !category || !amount) return showToast('資料不完整哦', 'error');
     try {
-      fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: "delete", id: String(record.id), date: record.date }).toString()}`).then(() => {
-        fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams({ action: "write", id: String(record.id), date: record.date, member: String(record.member), categoryLabel: record.categoryLabel, subCategory: record.subCategory || "", amount: String(calcAmt), note: nNote ? "'" + nNote : "" }).toString()}`);
-      });
-    } catch(err) { showToast("❌ 背景修改失敗", "error"); }
+      const value = calculateAmount(amount);
+      if (note.length > 1000) throw new Error('備註最多 1,000 字');
+      await runMutation({action:'write', id:newId(), requestId:newId(), date, member:selectedMembers.map(m => m.label).join('、'), categoryLabel:category.label, subCategory:subCategory || '', amount:value, note});
+    } catch (error) { showToast(error.message, 'error'); }
+  };
+  const handleDelete = async (id, rDate) => {
+    const record = records.find(r => r.id === id);
+    if (!record || record.duplicateId) return showToast('這筆帳目需先確認重複 ID', 'error');
+    return runMutation({action:'delete', id:String(id), requestId:newId(), date:rDate, expectedVersion:record.version || 0});
+  };
+  const handleUpdate = async (record, nAmt, nNote) => {
+    if (record.duplicateId) return showToast('這筆帳目需先確認重複 ID', 'error');
+    try { return await runMutation({action:'update', id:String(record.id), requestId:newId(), date:record.date, expectedVersion:record.version || 0, amount:calculateAmount(nAmt), note:nNote}); }
+    catch (error) { showToast(error.message,'error'); return false; }
   };
 
   const handleDuplicate = (r) => {
@@ -349,22 +386,28 @@ function App() {
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <div><div style={{ color:"#F59E0B", fontSize:13, fontWeight:700, letterSpacing:3, textTransform:"uppercase" }}>家庭共享</div><div style={{ color:"#fff", fontSize:26, fontWeight:900, marginTop:2 }}>記帳本</div></div>
-              <button onClick={() => window.location.reload()} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", padding:5, opacity:0.8 }}>🔄</button>
+              <button disabled={busy} onClick={() => fetchRecords(selYear, selMonth)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", padding:5, opacity:0.8 }}aria-label="重新讀取帳目">🔄</button>
               {tab === 0 && <div style={{ marginLeft: 4, padding: "6px 12px", background: "#333", borderRadius: 12, border: "1px solid #444", animation: "fadeIn 0.3s ease" }}><div style={{ color: "#9CA3AF", fontSize: 12, fontWeight: 700, marginBottom: 2 }}>本日總計</div><div style={{ color: "#F59E0B", fontSize: 18, fontWeight: 900 }}>{formatMoney(selectedDateTotal)}</div></div>}
             </div>
-            <div style={{ textAlign:"right" }}><div style={{ color:"#9CA3AF", fontSize:13, fontWeight:600 }}>{selMonth}月總計</div><div style={{ color:"#F59E0B", fontSize:24, fontWeight:900 }}>{formatMoney(records.reduce((s, r) => s + r.amount, 0))}</div></div>
+            <div style={{ textAlign:"right" }}><div style={{ color:"#9CA3AF", fontSize:13, fontWeight:600 }}>{selMonth}月總計</div><div style={{ color:"#F59E0B", fontSize:24, fontWeight:900 }}>{loading || readError ? "—" : formatMoney(records.reduce((s, r) => s + r.amount, 0))}</div></div>
           </div>
           <div style={{ display:"flex", gap:4 }}>{["記帳","報表"].map((t,i) => (<button key={t} onClick={() => setTab(i)} style={{ flex:1, padding:"12px 0", border:"none", background:"transparent", color: tab===i ? "#F59E0B" : "#6B7280", fontWeight:700, fontSize:18, cursor:"pointer", borderBottom:`4px solid ${tab===i ? "#F59E0B" : "transparent"}`, transition:"all 0.2s" }}>{t}</button>))}</div>
         </div>
       </div>
       <div style={{ maxWidth:480, margin:"0 auto", padding:"20px 16px 80px" }}>
-        {tab === 0 ? <FormView date={date} setDate={setDate} selectedMembers={selectedMembers} onMemberToggle={toggleMember} category={category} onCategorySelect={c => {setCategory(c); setSubCategory(null);}} subCategory={subCategory} setSubCategory={setSubCategory} amount={amount} setAmount={setAmount} note={note} setNote={setNote} onSubmit={handleSubmit} records={records} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} onDelete={handleDelete} onUpdate={handleUpdate} onDuplicate={handleDuplicate} loading={loading} searchQuery={searchQuery} setSearchQuery={setSearchQuery} /> : <DashboardView records={records} prevRecords={prevRecords} loading={loading} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} />}
+        {syncMessage && <div role="status" style={{padding:14,marginBottom:14,background:'#FFFBEB',borderRadius:12,lineHeight:1.7}}>{syncMessage}</div>}
+        {pending && <div style={{padding:14,marginBottom:14,background:'#FEF3C7',borderRadius:12}}><p>待確認：{pending.date}・{pending.action === 'write' ? '新增' : pending.action === 'update' ? '修改' : '刪除'}{pending.amount ? `・${formatMoney(pending.amount)}` : ''}</p><button disabled={busy} onClick={() => runMutation(pendingRef.current, true)} style={{padding:12,marginTop:8}}>{busy ? '確認中…' : '重試原操作'}</button><p style={{fontSize:12,marginTop:8}}>請先完成確認，再新增、修改或刪除其他帳目。</p></div>}
+        {readError && <p role="alert" style={{padding:14,color:'#B91C1C'}}>讀取未完成：{readError}。目前畫面不代表完整帳目。</p>}
+        {records.some(r => r.duplicateId) && <p role="alert" style={{padding:14,color:'#B91C1C'}}>發現舊資料有重複 ID，已暫停這些帳目的修改與刪除，請先在試算表確認。</p>}
+        <fieldset disabled={busy || !!pending} style={{border:0,minWidth:0,padding:0,pointerEvents:busy || pending ? "none" : "auto",opacity:busy ? 0.7 : 1}}>
+        {readError ? <p style={{padding:20}}>請按上方重新讀取，確認帳目載入完成後再操作。</p> : tab === 0 ? <FormView date={date} setDate={setDate} selectedMembers={selectedMembers} onMemberToggle={toggleMember} category={category} onCategorySelect={c => {setCategory(c); setSubCategory(null);}} subCategory={subCategory} setSubCategory={setSubCategory} amount={amount} setAmount={setAmount} note={note} setNote={setNote} busy={busy} onSubmit={handleSubmit} records={records} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} onDelete={handleDelete} onUpdate={handleUpdate} onDuplicate={handleDuplicate} loading={loading} searchQuery={searchQuery} setSearchQuery={setSearchQuery} /> : <DashboardView prevAvailable={prevAvailable} records={records} prevRecords={prevRecords} loading={loading} selYear={selYear} setSelYear={setSelYear} selMonth={selMonth} setSelMonth={setSelMonth} />}
+        </fieldset>
       </div>
     </div>
   );
 }
 
-function FormView({ date, setDate, selectedMembers, onMemberToggle, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, records, selYear, setSelYear, selMonth, setSelMonth, onDelete, onUpdate, onDuplicate, loading, searchQuery, setSearchQuery }) {
+function FormView({ busy, date, setDate, selectedMembers, onMemberToggle, category, onCategorySelect, subCategory, setSubCategory, amount, setAmount, note, setNote, onSubmit, records, selYear, setSelYear, selMonth, setSelMonth, onDelete, onUpdate, onDuplicate, loading, searchQuery, setSearchQuery }) {
   const catObj = CATEGORIES.find(c => c.id === category?.id);
   const [confirmId, setConfirmId] = useState(null);
   const [editId, setEditId] = useState(null);
@@ -441,17 +484,14 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
         <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="備註（選填）⋯" rows={2} style={{ width:"100%", marginTop:16, fontSize:16, fontWeight:500, border:"2px solid #F3F4F6", borderRadius:12, padding:"14px 16px", color:"#374151", background:"#F9FAFB", outline:"none", resize:"none", lineHeight:1.6 }} />
         {(() => {
           if (!note.trim()) return null;
-          const counts = {};
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('cache_')) { try { JSON.parse(localStorage.getItem(key)).forEach(r => { if (r.note && r.note.trim()) { const n = r.note.trim(); counts[n] = (counts[n] || 0) + 1; } }); } catch(e) {} }
-          }
+          const counts = Object.create(null);
+          records.forEach(r => { const n = String(r.note || '').replace(/^'/,'').trim(); if (n) counts[n] = (counts[n] || 0) + 1; });
           const suggs = Object.keys(counts).filter(n => n.toLowerCase().includes(note.toLowerCase()) && n !== note).sort((a,b) => counts[b] - counts[a]).slice(0, 3);
           if (suggs.length === 0) return null;
           return (<div style={{ display:"flex", gap:10, marginTop:12, flexWrap:"wrap", animation:"slideUp 0.2s ease" }}><span style={{ fontSize:14, color:"#9CA3AF", display:"flex", alignItems:"center", fontWeight:700 }}>💡 猜你想輸入：</span>{suggs.map(s => (<button key={s} onClick={() => setNote(s)} style={{ padding:"6px 14px", background:"#F3F4F6", color:"#374151", border:"1px solid #E5E7EB", borderRadius:99, fontSize:15, fontWeight:700, cursor:"pointer" }}>{s}</button>))}</div>);
         })()}
       </Card>
-      <button onClick={onSubmit} style={{ width:"100%", padding:"20px 0", background:"#1a1a1a", color:"#F59E0B", border:"none", borderRadius:16, fontSize:22, fontWeight:900, cursor:"pointer", letterSpacing:4, boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>＋ 新增支出</button>
+      <button onClick={onSubmit} style={{ width:"100%", padding:"20px 0", background:"#1a1a1a", color:"#F59E0B", border:"none", borderRadius:16, fontSize:22, fontWeight:900, cursor:"pointer", letterSpacing:4, boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>{busy ? "儲存中…" : "＋ 新增支出"}</button>
       
       <div style={{ marginTop:30 }}>
         
@@ -473,8 +513,8 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
 
         {loading ? <div style={{ textAlign:"center", padding:"30px", color:"#9CA3AF", fontWeight:900, fontSize:18 }}>⏳ 同步資料中...</div> : 
           displayRecords.length === 0 ? <div style={{ textAlign:"center", padding:"30px", color:"#9CA3AF", fontWeight:700, fontSize:16, background:"#fff", borderRadius:16, border:"2px dashed #E5E7EB" }}>{searchQuery.trim() ? "找不到相關紀錄 🥺" : "這天沒有花錢喔！🎉"}</div> : 
-          displayRecords.map(r => (
-            <div key={r.id} style={{ background:"#fff", borderRadius:16, padding:"14px 16px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.05)", borderLeft:`6px solid ${r.categoryColor}` }}>
+          displayRecords.map((r, recordIndex) => (
+            <div key={`${r.id}-${recordIndex}`} style={{ background:"#fff", borderRadius:16, padding:"14px 16px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.05)", borderLeft:`6px solid ${r.categoryColor}` }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <div style={{ width:40, height:40, borderRadius:12, background:(r.categoryColor||"#ccc")+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{r.categoryEmoji}</div>
                 <div style={{ flex:1, minWidth:0 }}>
@@ -497,15 +537,15 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
                 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, marginLeft: 4, flexShrink:0 }}>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => { setEditId(r.id); setEditAmt(r.amount); setEditNote(r.note ? r.note.replace(/^'/, '') : ""); setConfirmId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, padding:2 }}>✏️</button>
-                    <button onClick={() => { setConfirmId(confirmId === r.id ? null : r.id); setEditId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, padding:2 }}>🗑</button>
+                    <button disabled={r.duplicateId} onClick={() => { setEditId(r.id); setEditAmt(r.amount); setEditNote(r.note ? r.note.replace(/^'/, '') : ""); setConfirmId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, padding:2 }}>✏️</button>
+                    <button disabled={r.duplicateId} onClick={() => { setConfirmId(confirmId === r.id ? null : r.id); setEditId(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, padding:2 }}>🗑</button>
                   </div>
                   <button onClick={() => onDuplicate(r)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, padding:2 }}>🔁</button>
                 </div>
 
               </div>
-              {confirmId === r.id && (<div style={{ marginTop:14, paddingTop: 12, borderTop: "1px dashed #E5E7EB", display:"flex", gap:10, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}><button onClick={() => setConfirmId(null)} style={{ padding:"6px 16px", borderRadius:99, border:"1px solid #E5E7EB", background:"#F3F4F6", color:"#4B5563", fontSize:13, fontWeight:700, cursor:"pointer" }}>取消</button><button onClick={() => { onDelete(r.id, r.date); setConfirmId(null); }} style={{ padding:"6px 16px", borderRadius:99, border:"none", background:"#EF4444", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>確認刪除</button></div>)}
-              {editId === r.id && (<div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed #E5E7EB", animation: "slideUp 0.2s ease" }}><div style={{ display: "flex", gap: 8, marginBottom: 10 }}><div style={{ position: "relative", width: "40%" }}><span style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", color:"#9CA3AF", fontSize:14 }}>$</span><input type="text" inputMode="decimal" value={editAmt} onChange={e => setEditAmt(e.target.value)} style={{ width: "100%", padding: "8px 8px 8px 20px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 15, fontWeight:700, outline: "none", background:"#F9FAFB" }} /></div><input type="text" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="備註..." style={{ width: "60%", padding: "8px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, outline: "none", background:"#F9FAFB" }} /></div><div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}><button onClick={() => setEditId(null)} style={{ padding: "6px 16px", borderRadius: 99, background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#4B5563", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>取消</button><button onClick={() => { onUpdate(r, editAmt, editNote); setEditId(null); }} style={{ padding: "6px 16px", borderRadius: 99, background: "#10B981", border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>儲存</button></div></div>)}
+              {confirmId === r.id && (<div style={{ marginTop:14, paddingTop: 12, borderTop: "1px dashed #E5E7EB", display:"flex", gap:10, justifyContent:"flex-end", animation:"slideUp 0.2s ease" }}><button onClick={() => setConfirmId(null)} style={{ padding:"6px 16px", borderRadius:99, border:"1px solid #E5E7EB", background:"#F3F4F6", color:"#4B5563", fontSize:13, fontWeight:700, cursor:"pointer" }}>取消</button><button onClick={async () => { if (await onDelete(r.id, r.date)) setConfirmId(null); }} style={{ padding:"6px 16px", borderRadius:99, border:"none", background:"#EF4444", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>確認刪除</button></div>)}
+              {editId === r.id && (<div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed #E5E7EB", animation: "slideUp 0.2s ease" }}><div style={{ display: "flex", gap: 8, marginBottom: 10 }}><div style={{ position: "relative", width: "40%" }}><span style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", color:"#9CA3AF", fontSize:14 }}>$</span><input type="text" inputMode="decimal" value={editAmt} onChange={e => setEditAmt(e.target.value)} style={{ width: "100%", padding: "8px 8px 8px 20px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 15, fontWeight:700, outline: "none", background:"#F9FAFB" }} /></div><input type="text" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="備註..." style={{ width: "60%", padding: "8px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, outline: "none", background:"#F9FAFB" }} /></div><div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}><button onClick={() => setEditId(null)} style={{ padding: "6px 16px", borderRadius: 99, background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#4B5563", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>取消</button><button onClick={async () => { if (await onUpdate(r, editAmt, editNote)) setEditId(null); }} style={{ padding: "6px 16px", borderRadius: 99, background: "#10B981", border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>儲存</button></div></div>)}
             </div>
           ))
         }
@@ -514,7 +554,7 @@ function FormView({ date, setDate, selectedMembers, onMemberToggle, category, on
   );
 }
 
-function DashboardView({ records, prevRecords, loading, selYear, setSelYear, selMonth, setSelMonth }) {
+function DashboardView({ prevAvailable, records, prevRecords, loading, selYear, setSelYear, selMonth, setSelMonth }) {
   const categoryTotals = CATEGORIES.map(cat => ({ ...cat, total: records.filter(r => r.category === cat.id).reduce((s, r) => s + r.amount, 0) })).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
   
   const totalSpend = records.reduce((s, r) => s + r.amount, 0);
@@ -540,7 +580,7 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
               <div>
                 <div style={{ color:"#9CA3AF", fontSize:14, fontWeight:700 }}>當月支出</div>
                 <div style={{ color:"#F59E0B", fontSize:38, fontWeight:900, letterSpacing:-1, marginTop:4 }}>{formatMoney(totalSpend)}</div>
-                {prevRecords.length > 0 && (
+                {prevAvailable && (
                   <div style={{ fontSize: 13, marginTop: 6, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
                     {diff > 0 ? (
                       <span style={{ color: "#EF4444", background: "#FEE2E2", padding: "2px 6px", borderRadius: 4 }}>📈 比上月多 {formatMoney(diff)}</span>
@@ -621,8 +661,8 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
                   </div>
                   <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1 }}>
                     {memberRecords.length === 0 ? ( <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0', fontWeight: 700 }}>這個月還沒有花費喔！</div> ) : (
-                      memberRecords.map(r => (
-                        <div key={r.id} style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', borderLeft: `6px solid ${r.categoryColor}` }}>
+                      memberRecords.map((r, recordIndex) => (
+                        <div key={`${r.id}-${recordIndex}`} style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', borderLeft: `6px solid ${r.categoryColor}` }}>
                           <div style={{ width: 40, height: 40, borderRadius: 12, background: (r.categoryColor||'#ccc')+'22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{r.categoryEmoji}</div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -645,7 +685,7 @@ function DashboardView({ records, prevRecords, loading, selYear, setSelYear, sel
 
           {detailCategory && (() => {
             const catRecords = records.filter(r => r.category === detailCategory.id);
-            const subTotals = {};
+            const subTotals = Object.create(null);
             catRecords.forEach(r => {
                 const sub = r.subCategory || "未分類";
                 subTotals[sub] = (subTotals[sub] || 0) + r.amount;
