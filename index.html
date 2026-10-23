@@ -3072,19 +3072,7 @@ function QueueApp() {
     date: recordDate,
     expectedVersion: record.version || 0
   }, 5000);
-}; => {
-    const record = records.find(record => record.id === id);
-
-    if (!record || record.duplicateId) return false;
-
-    return enqueue({
-      action: 'delete',
-      id: String(id),
-      requestId: newId(),
-      date: recordDate,
-      expectedVersion: record.version || 0
-    });
-  };
+};
 
   const handleUpdate = (record, newAmount, newNote) => {
     if (record.duplicateId) return false;
