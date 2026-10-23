@@ -2530,5 +2530,824 @@ function CategoryDetails({
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);
 </script>
+ <style>
+  .queue-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #40332d;
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px 0;
+  }
+
+  @media (display-mode: standalone) {
+    .queue-header {
+      padding-top:
+        calc(max(env(safe-area-inset-top, 0px), 24px) + 20px);
+    }
+  }
+
+  .queue-toast {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    max-width: 90vw;
+    padding: 12px 18px;
+    border-radius: 16px;
+    background: #40332d;
+    color: white;
+    font-size: 14px;
+    box-shadow: 0 4px 16px #0002;
+    pointer-events: none;
+  }
+</style>
+
+<script type="text/babel">
+const Q_PREFIX = 'family_ledger_v3_queue_';
+
+const Q_FATAL = [
+  'VALIDATION', 'CONFLICT', 'DUPLICATE_ID', 'NOT_FOUND', 'SCHEMA'
+];
+
+function readQueue() {
+  const result = [];
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+
+    if (!key?.startsWith(Q_PREFIX)) continue;
+
+    const item = JSON.parse(localStorage.getItem(key));
+
+    if (!item?.payload?.requestId) {
+      throw new Error('待同步資料格式異常，請勿清除網站資料。');
+    }
+
+    result.push(item);
+  }
+
+  return result.sort((a, b) =>
+    a.created - b.created ||
+    a.payload.requestId.localeCompare(b.payload.requestId)
+  );
+}
+
+function storeQueue(item) {
+  localStorage.setItem(
+    Q_PREFIX + item.payload.requestId,
+    JSON.stringify(item)
+  );
+}
+
+function queueOverlay(base, queue, year, month) {
+  const prefix = `${year}-${String(month).padStart(2, '0')}`;
+  let result = base.slice();
+
+  queue.filter(item =>
+    item.payload.date.slice(0, 7) === prefix && !item.fatal
+  ).forEach(item => {
+    const p = item.payload;
+
+    if (p.action === 'delete') {
+      result = result.filter(record => record.id !== p.id);
+    } else if (p.action === 'write') {
+      const record = enrichRecords([{ ...p, version: 1 }])[0];
+
+      result = [
+        ...result.filter(record => record.id !== p.id),
+        { ...record, duplicateId: true, _syncPending: true }
+      ];
+    } else {
+      result = result.map(record =>
+        record.id === p.id
+          ? {
+              ...record,
+              amount: p.amount,
+              note: p.note,
+              duplicateId: true,
+              _syncPending: true
+            }
+          : record
+      );
+    }
+  });
+
+  return result.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function QueueApp() {
+  const [tab, setTab] = useState(0);
+  const [selYear, setSelYear] = useState(new Date().getFullYear());
+  const [selMonth, setSelMonth] = useState(new Date().getMonth() + 1);
+  const [date, setDate] = useState(today());
+  const [selectedMembers, setSelectedMembers] = useState([]);
+  const [category, setCategory] = useState(null);
+  const [subCategory, setSubCategory] = useState(null);
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [sending, setSending] = useState(false);
+  const [storageError, setStorageError] = useState('');
+  const [readError, setReadError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [base, setBase] = useState([]);
+  const [previous, setPrevious] = useState([]);
+  const [prevAvailable, setPrevAvailable] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const alive = useRef(true);
+  const running = useRef(false);
+  const timer = useRef(null);
+  const toastTimer = useRef(null);
+  const generation = useRef(0);
+  const view = useRef({ year: selYear, month: selMonth });
+  const submitLock = useRef(false);
+  const processor = useRef(null);
+  const reload = useRef(null);
+
+  view.current = { year: selYear, month: selMonth };
+
+  const refreshQueue = useCallback(() => {
+    try {
+      const items = readQueue();
+      setQueue(items);
+      setStorageError('');
+      return items;
+    } catch (error) {
+      setStorageError(error.message);
+      return [];
+    }
+  }, []);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  };
+
+  const fetchRecords = useCallback(async (year, month) => {
+    const seq = ++generation.current;
+
+    setLoading(true);
+    setReadError('');
+    setLastUpdated(null);
+    setBase([]);
+    setPrevious([]);
+    setPrevAvailable(false);
+
+    const prevM = month === 1 ? 12 : month - 1;
+    const prevY = month === 1 ? year - 1 : year;
+
+    await Promise.all([
+      apiCall({
+        action: 'read',
+        month: `${year}_${String(month).padStart(2, '0')}`
+      }).then(data => {
+        if (alive.current && seq === generation.current) {
+          setBase(enrichRecords(data.records));
+          setLastUpdated(new Date());
+        }
+      }).catch(error => {
+        if (alive.current && seq === generation.current) {
+          setReadError(error.message);
+        }
+      }).finally(() => {
+        if (alive.current && seq === generation.current) {
+          setLoading(false);
+        }
+      }),
+
+      apiCall({
+        action: 'read',
+        month: `${prevY}_${String(prevM).padStart(2, '0')}`
+      }).then(data => {
+        if (alive.current && seq === generation.current) {
+          setPrevious(enrichRecords(data.records));
+          setPrevAvailable(true);
+        }
+      }).catch(() => {})
+    ]);
+  }, []);
+
+  reload.current = () =>
+    fetchRecords(view.current.year, view.current.month);
+
+  processor.current = async () => {
+    if (running.current || !alive.current) return;
+
+    running.current = true;
+    clearTimeout(timer.current);
+
+    let wait = 0;
+
+    try {
+      while (alive.current) {
+        const items = readQueue();
+
+        const item = items.find(item =>
+          !item.fatal && (item.retryAt || 0) <= Date.now()
+        );
+
+        if (!item) {
+          const times = items
+            .filter(item => !item.fatal)
+            .map(item =>
+              Math.max(500, (item.retryAt || 0) - Date.now())
+            );
+
+          wait = times.length ? Math.min(...times) : 0;
+          break;
+        }
+
+        setSending(true);
+        generation.current++;
+
+        try {
+          await apiCall(item.payload);
+
+          const p = item.payload;
+          const currentView = view.current;
+
+          const apply = rows => {
+            if (p.action === 'delete') {
+              return rows.filter(record => record.id !== p.id);
+            }
+
+            if (p.action === 'write') {
+              return [
+                ...rows.filter(record => record.id !== p.id),
+                ...enrichRecords([{ ...p, version: 1 }])
+              ];
+            }
+
+            return rows.map(record =>
+              record.id === p.id
+                ? {
+                    ...record,
+                    amount: p.amount,
+                    note: p.note,
+                    version: p.expectedVersion + 1
+                  }
+                : record
+            );
+          };
+
+          if (alive.current) {
+            const currentMonth =
+              `${currentView.year}-` +
+              String(currentView.month).padStart(2, '0');
+
+            if (p.date.slice(0, 7) === currentMonth) {
+              setBase(apply);
+            }
+
+            const pm = currentView.month === 1
+              ? 12 : currentView.month - 1;
+
+            const py = currentView.month === 1
+              ? currentView.year - 1 : currentView.year;
+
+            if (
+              p.date.slice(0, 7) ===
+              `${py}-${String(pm).padStart(2, '0')}`
+            ) {
+              setPrevious(apply);
+            }
+          }
+
+          localStorage.removeItem(Q_PREFIX + p.requestId);
+        } catch (error) {
+          const stored = localStorage.getItem(
+            Q_PREFIX + item.payload.requestId
+          );
+
+          if (stored) {
+            const attempts = (item.attempts || 0) + 1;
+            const fatal = Q_FATAL.includes(error.code);
+
+            storeQueue({
+              ...item,
+              attempts,
+              fatal,
+              error: fatal
+                ? error.message
+                : '連線未確認，將自動重試',
+              retryAt: Date.now() + Math.min(
+                30000,
+                2000 * 2 ** Math.min(attempts - 1, 4)
+              )
+            });
+          }
+        }
+
+        if (alive.current) refreshQueue();
+      }
+    } catch (error) {
+      if (alive.current) {
+        setStorageError(
+          '無法存取待同步資料，請勿清除網站資料。'
+        );
+      }
+    } finally {
+      running.current = false;
+
+      if (alive.current) {
+        setSending(false);
+        refreshQueue();
+        reload.current();
+
+        if (wait) {
+          timer.current = setTimeout(
+            () => processor.current(), wait
+          );
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
+    alive.current = true;
+
+    try {
+      const old = JSON.parse(
+        sessionStorage.getItem(PENDING_KEY) || 'null'
+      );
+
+      if (old?.requestId) {
+        if (!localStorage.getItem(Q_PREFIX + old.requestId)) {
+          storeQueue({
+            payload: old,
+            created: Date.now(),
+            attempts: 0,
+            retryAt: 0
+          });
+        }
+
+        sessionStorage.removeItem(PENDING_KEY);
+      }
+
+      refreshQueue();
+      processor.current();
+    } catch (error) {
+      setStorageError(
+        '無法保留待同步資料，請確認網站儲存空間可用。'
+      );
+    }
+
+    const wake = () => {
+      refreshQueue();
+      processor.current();
+    };
+
+    const storage = event => {
+      if (event.key?.startsWith(Q_PREFIX)) wake();
+    };
+
+    const leave = event => {
+      if (readQueue().length) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    window.addEventListener('storage', storage);
+    window.addEventListener('online', wake);
+    window.addEventListener('beforeunload', leave);
+
+    return () => {
+      alive.current = false;
+      generation.current++;
+      clearTimeout(timer.current);
+      clearTimeout(toastTimer.current);
+      window.removeEventListener('storage', storage);
+      window.removeEventListener('online', wake);
+      window.removeEventListener('beforeunload', leave);
+    };
+  }, [refreshQueue]);
+
+  useEffect(() => {
+    fetchRecords(selYear, selMonth);
+    return () => { generation.current++; };
+  }, [selYear, selMonth, fetchRecords]);
+
+  useEffect(() => {
+    const [year, month] = date.split('-');
+    setSelYear(Number(year));
+    setSelMonth(Number(month));
+  }, [date]);
+
+  function enqueue(payload) {
+    try {
+      if (readQueue().some(item => item.payload.id === payload.id)) {
+        showToast(
+          '這筆正在同步，其他帳目可以繼續記。',
+          'error'
+        );
+        return false;
+      }
+
+      storeQueue({
+        payload,
+        created: Date.now(),
+        attempts: 0,
+        retryAt: 0
+      });
+
+      refreshQueue();
+      setTimeout(() => processor.current(), 0);
+
+      return true;
+    } catch (error) {
+      setStorageError(
+        '無法保存這筆操作，因此沒有送出。請確認網站儲存空間。'
+      );
+      return false;
+    }
+  }
+
+  const handleSubmit = () => {
+    if (submitLock.current) return;
+
+    if (!selectedMembers.length || !category || !amount) {
+      return showToast('資料不完整哦', 'error');
+    }
+
+    try {
+      const value = calculateAmount(amount);
+
+      if (note.length > 1000) {
+        throw new Error('備註最多 1,000 字');
+      }
+
+      submitLock.current = true;
+
+      const saved = enqueue({
+        action: 'write',
+        id: newId(),
+        requestId: newId(),
+        date,
+        member: selectedMembers.map(member => member.label).join('、'),
+        categoryLabel: category.label,
+        subCategory: subCategory || '',
+        amount: value,
+        note
+      });
+
+      if (saved) {
+        setSelectedMembers([]);
+        setCategory(null);
+        setSubCategory(null);
+        setAmount('');
+        setNote('');
+        showToast('已加入待同步，可以繼續記帳');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setTimeout(() => { submitLock.current = false; }, 250);
+    }
+  };
+
+  const records = queueOverlay(base, queue, selYear, selMonth);
+
+  const pm = selMonth === 1 ? 12 : selMonth - 1;
+  const py = selMonth === 1 ? selYear - 1 : selYear;
+
+  const prevRecords = queueOverlay(previous, queue, py, pm);
+
+  const toggleMember = member => {
+    setSelectedMembers(prev =>
+      member.id === 'whole_family'
+        ? [member]
+        : prev.some(item => item.id === member.id)
+          ? prev.filter(item =>
+              item.id !== member.id && item.id !== 'whole_family'
+            )
+          : [
+              ...prev.filter(item => item.id !== 'whole_family'),
+              member
+            ]
+    );
+  };
+
+  const handleDelete = (id, recordDate) => {
+    const record = records.find(record => record.id === id);
+
+    if (!record || record.duplicateId) return false;
+
+    return enqueue({
+      action: 'delete',
+      id: String(id),
+      requestId: newId(),
+      date: recordDate,
+      expectedVersion: record.version || 0
+    });
+  };
+
+  const handleUpdate = (record, newAmount, newNote) => {
+    if (record.duplicateId) return false;
+
+    try {
+      if (newNote.length > 1000) {
+        throw new Error('備註最多 1,000 字');
+      }
+
+      return enqueue({
+        action: 'update',
+        id: String(record.id),
+        requestId: newId(),
+        date: record.date,
+        expectedVersion: record.version || 0,
+        amount: calculateAmount(newAmount),
+        note: newNote
+      });
+    } catch (error) {
+      showToast(error.message, 'error');
+      return false;
+    }
+  };
+
+  const handleDuplicate = record => {
+    setCategory(
+      CATEGORIES.find(category => category.id === record.category)
+    );
+    setSubCategory(record.subCategory);
+    setAmount(String(record.amount));
+    setNote(String(record.note || '').replace(/^'/, ''));
+    setSelectedMembers(record.memberObjs || []);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const retry = item => {
+    try {
+      storeQueue({
+        ...item,
+        fatal: false,
+        error: '',
+        retryAt: 0
+      });
+      refreshQueue();
+      processor.current();
+    } catch (error) {
+      setStorageError(error.message);
+    }
+  };
+
+  const cancel = item => {
+    if (!item.fatal) return;
+
+    localStorage.removeItem(Q_PREFIX + item.payload.requestId);
+    refreshQueue();
+    reload.current();
+  };
+
+  const selectedDateTotal = records
+    .filter(record => record.date === date)
+    .reduce((sum, record) => sum + record.amount, 0);
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F7F3EE' }}>
+      {toast && (
+        <div className="queue-toast">{toast.msg}</div>
+      )}
+
+      <header className="queue-header">
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            marginBottom: 18
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10
+            }}>
+              <div>
+                <div style={{
+                  color: '#F2BD8D',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: 3
+                }}>
+                  家庭共享
+                </div>
+                <div style={{
+                  color: '#fff', fontSize: 26, fontWeight: 900
+                }}>
+                  記帳本
+                </div>
+              </div>
+
+              <button
+                aria-label="重新讀取帳目"
+                onClick={() => reload.current()}
+                style={{
+                  background: 'none',
+                  border: 0,
+                  fontSize: 24,
+                  padding: 5
+                }}
+              >
+                🔄
+              </button>
+
+              {tab === 0 && (
+                <div style={{
+                  background: '#514036',
+                  padding: '6px 10px',
+                  borderRadius: 12
+                }}>
+                  <div style={{ fontSize: 12, color: '#D8C9BD' }}>
+                    本日總計
+                  </div>
+                  <strong style={{ color: '#F2BD8D', fontSize: 18 }}>
+                    {formatMoney(selectedDateTotal)}
+                  </strong>
+                </div>
+              )}
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ color: '#D8C9BD', fontSize: 13 }}>
+                {selMonth}月總計
+              </div>
+              <strong style={{ fontSize: 24, color: '#F2BD8D' }}>
+                {formatMoney(
+                  records.reduce((sum, record) => sum + record.amount, 0)
+                )}
+              </strong>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 4 }}>
+            {['記帳', '報表'].map((label, index) => (
+              <button
+                key={label}
+                onClick={() => setTab(index)}
+                style={{
+                  flex: 1,
+                  padding: '12px 0',
+                  border: 0,
+                  borderBottom: `4px solid ${
+                    tab === index ? '#F2BD8D' : 'transparent'
+                  }`,
+                  background: 'transparent',
+                  color: tab === index ? '#F2BD8D' : '#D8C9BD',
+                  fontSize: 18,
+                  fontWeight: 700
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      <main style={{
+        maxWidth: 480,
+        margin: '0 auto',
+        padding: '16px 16px 80px'
+      }}>
+        <div className="sync-time" role="status">
+          {queue.length
+            ? `${sending ? '同步中' : '待同步'} ${
+                queue.length
+              } 筆，可以繼續記帳。畫面金額含待同步帳目。`
+            : lastUpdated
+              ? `本月最後更新：${lastUpdated.toLocaleString(
+                  'zh-TW',
+                  {
+                    timeZone: 'Asia/Taipei',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                  }
+                )}`
+              : '正在讀取本月資料…'}
+        </div>
+
+        {storageError && (
+          <p role="alert" style={{ color: '#B91C1C', padding: 12 }}>
+            {storageError}
+          </p>
+        )}
+
+        {readError && (
+          <p role="alert" style={{ color: '#B91C1C', padding: 12 }}>
+            帳目尚未完整載入：{readError}。
+            可以先記新帳，系統會繼續同步。
+          </p>
+        )}
+
+        {queue.filter(item => item.error).map(item => (
+          <div
+            key={item.payload.requestId}
+            style={{
+              padding: 12,
+              marginBottom: 12,
+              background: '#FFF0DA',
+              borderRadius: 12,
+              fontSize: 14
+            }}
+          >
+            <strong>
+              {item.payload.date}・
+              {item.payload.action === 'delete'
+                ? '刪除'
+                : item.payload.action === 'update'
+                  ? '修改'
+                  : '新增'}
+              {' '}
+              {item.payload.amount
+                ? formatMoney(item.payload.amount)
+                : ''}
+            </strong>
+
+            <p>{item.error}</p>
+
+            <button
+              onClick={() => retry(item)}
+              style={{ padding: 8, marginTop: 6 }}
+            >
+              重試
+            </button>
+
+            {item.fatal && (
+              <button
+                onClick={() => cancel(item)}
+                style={{ padding: 8, marginLeft: 8 }}
+              >
+                取消這筆變更
+              </button>
+            )}
+          </div>
+        ))}
+
+        {records.some(record =>
+          record.duplicateId && !record._syncPending
+        ) && (
+          <p style={{ color: '#B91C1C', padding: 12 }}>
+            舊帳目有重複 ID，請先在試算表確認。
+          </p>
+        )}
+
+        {tab === 0 ? (
+          <FormView
+            busy={false}
+            date={date}
+            setDate={setDate}
+            selectedMembers={selectedMembers}
+            onMemberToggle={toggleMember}
+            category={category}
+            onCategorySelect={category => {
+              setCategory(category);
+              setSubCategory(null);
+            }}
+            subCategory={subCategory}
+            setSubCategory={setSubCategory}
+            amount={amount}
+            setAmount={setAmount}
+            note={note}
+            setNote={setNote}
+            onSubmit={handleSubmit}
+            records={records}
+            selYear={selYear}
+            setSelYear={setSelYear}
+            selMonth={selMonth}
+            setSelMonth={setSelMonth}
+            onDelete={handleDelete}
+            onUpdate={handleUpdate}
+            onDuplicate={handleDuplicate}
+            loading={loading && !records.length}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
+        ) : (
+          <DashboardView
+            prevAvailable={prevAvailable}
+            records={records}
+            prevRecords={prevRecords}
+            loading={loading && !records.length}
+            selYear={selYear}
+            setSelYear={setSelYear}
+            selMonth={selMonth}
+            setSelMonth={setSelMonth}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
+
+root.render(<QueueApp />);
+</script>
 </body>
 </html>
